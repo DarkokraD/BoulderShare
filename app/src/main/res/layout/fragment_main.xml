@@ -4,15 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.herak.bouldershare.MainActivityFragment"
+    tools:context="com.herak.bouldershare.MainFragment"
     tools:showIn="@layout/activity_main">
 
-    <ImageView
-        android:id="@+id/imageViewMain"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
-         />
+<TextView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:text="Ovo je glavni fragment"/>
 
 </android.support.constraint.ConstraintLayout>
