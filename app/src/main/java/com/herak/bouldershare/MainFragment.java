@@ -3,9 +3,13 @@ package com.herak.bouldershare;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
+import static android.R.attr.id;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -23,10 +27,17 @@ public class MainFragment extends Fragment {
 
 
         View view = inflater.inflate(R.layout.fragment_main, container, false);
+        setHasOptionsMenu(true);
 
 
 
         return view;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        menu.findItem(R.id.action_share).setVisible(false);
     }
 
     @Override

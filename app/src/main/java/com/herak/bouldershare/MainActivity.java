@@ -1,5 +1,6 @@
 package com.herak.bouldershare;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -18,7 +19,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.herak.bouldershare.classes.MyView;
+
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -44,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
             // Continue only if the File was successfully created
             if (photoFile != null) {
                 Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.example.android.fileprovider",
+                        "com.herak.bouldershare.fileprovider",
                         photoFile);
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
@@ -56,6 +60,10 @@ public class MainActivity extends AppCompatActivity {
 
     public Bitmap getmBoulderBitmap() {
         return mBoulderBitmap;
+    }
+
+    public void setmBoulderBitmap(Bitmap bitmap){
+        this.mBoulderBitmap = bitmap;
     }
 
     private Bitmap mBoulderBitmap;
@@ -156,7 +164,34 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_share) {
+            // save bitmap to cache directory
+            Context context = this;
+            mBoulderBitmap = ((MyView) findViewById(R.id.myView)).getBitmap();
+            try {
+
+                File cachePath = new File(context.getCacheDir(), "images");
+                cachePath.mkdirs(); // don't forget to make the directory
+                FileOutputStream stream = new FileOutputStream(cachePath + "/image.png"); // overwrites this image every time
+                mBoulderBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                stream.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            File imagePath = new File(context.getCacheDir(), "images");
+            File newFile = new File(imagePath, "image.png");
+            Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", newFile);
+
+            if (contentUri != null) {
+                Intent shareIntent = new Intent();
+                shareIntent.setAction(Intent.ACTION_SEND);
+                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
+                shareIntent.setDataAndType(contentUri, getContentResolver().getType(contentUri));
+                shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+                startActivity(Intent.createChooser(shareIntent, "Choose an app"));
+            }
             return true;
         }
 
