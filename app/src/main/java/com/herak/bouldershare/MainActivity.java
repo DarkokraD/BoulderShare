@@ -18,12 +18,15 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
 import com.herak.bouldershare.classes.MyView;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -32,6 +35,7 @@ import static android.R.attr.rotation;
 public class MainActivity extends AppCompatActivity {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
+    static final int RESULT_LOAD_IMG = 2;
 
 
     //Create an intent to take a picture, launch the appropriate activity and retrieve the
@@ -86,14 +90,39 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 mBoulderBitmap = Bitmap.createBitmap(mBoulderBitmap, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true); // rotating bitmap
+                nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
             }
             catch (Exception e) {
+                Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
+            }
+        }else if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK) {
+            try {
+                final Uri imageUri = data.getData();
+                final InputStream imageStream = getContentResolver().openInputStream(imageUri);
+                final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
 
+                try {
+                    ExifInterface exif = new ExifInterface(imageUri.getPath());
+                    int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                    int rotationInDegrees = exifToDegrees(orientation);
+                    Matrix matrix = new Matrix();
+                    if (rotation != 0f) {
+                        matrix.preRotate(rotationInDegrees);
+                    }
+
+                    mBoulderBitmap = Bitmap.createBitmap(selectedImage, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true); // rotating bitmap
+                    nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
+                }
+                catch (Exception e) {
+                    Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
             }
 
-            nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
-
-
+        }else {
+            Toast.makeText(this, "You haven't picked Image",Toast.LENGTH_LONG).show();
         }
     }
 
@@ -138,11 +167,21 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fabCamera);
-        fab.setOnClickListener(new View.OnClickListener() {
+        FloatingActionButton fabCamera = (FloatingActionButton) findViewById(R.id.fabCamera);
+        FloatingActionButton fabGallery = (FloatingActionButton) findViewById(R.id.fabCamera);
+        fabCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 dispatchTakePictureIntent();
+            }
+        });
+
+        fabGallery.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
+                photoPickerIntent.setType("image/*");
+                startActivityForResult(photoPickerIntent, RESULT_LOAD_IMG);
             }
         });
 
