@@ -35,7 +35,6 @@ public class MyView extends View {
 
     ScaleGestureDetector scaleGestureDetector;
 
-    boolean isScale;
     long lastScale;
 
     public MyView(Context context) {
