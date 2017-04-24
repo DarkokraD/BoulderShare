@@ -5,12 +5,12 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
+import android.support.media.ExifInterface;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
@@ -98,24 +98,31 @@ public class MainActivity extends AppCompatActivity {
         }else if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK) {
             try {
                 final Uri imageUri = data.getData();
-                final InputStream imageStream = getContentResolver().openInputStream(imageUri);
+                InputStream imageStream = getContentResolver().openInputStream(imageUri);
                 final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
-
                 try {
-                    ExifInterface exif = new ExifInterface(imageUri.getPath());
-                    int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                    int rotationInDegrees = exifToDegrees(orientation);
-                    Matrix matrix = new Matrix();
-                    if (rotation != 0f) {
-                        matrix.preRotate(rotationInDegrees);
-                    }
-
-                    mBoulderBitmap = Bitmap.createBitmap(selectedImage, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true); // rotating bitmap
+                    mBoulderBitmap = modifyOrientation(selectedImage, imageStream);
                     nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
-                }
-                catch (Exception e) {
+                } catch (IOException e) {
+                    e.printStackTrace();
                     Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
                 }
+
+
+//                try {
+//                    ExifInterface exif = new ExifInterface(imageStream);
+//                    int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+//                    int rotationInDegrees = exifToDegrees(orientation);
+//                    Matrix matrix = new Matrix();
+//                    if (rotation != 0f) {
+//                        matrix.preRotate(rotationInDegrees);
+//                    }
+//                    mBoulderBitmap = Bitmap.createBitmap(selectedImage, 0, 0, selectedImage.getWidth(), selectedImage.getHeight(), matrix, true); // rotating bitmap
+//                    nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
+//                }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
                 Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
@@ -125,6 +132,50 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "You haven't picked Image",Toast.LENGTH_LONG).show();
         }
     }
+
+    public static Bitmap modifyOrientation(Bitmap bitmap, InputStream imageStream) throws IOException {
+
+        ExifInterface ei = new ExifInterface(imageStream);
+        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+        int rotateBecauseOfWidthHeightRatio = 0;
+
+        if(bitmap.getWidth() > bitmap.getHeight())
+            rotateBecauseOfWidthHeightRatio = 90;
+
+        switch (orientation) {
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                return rotate(bitmap, 90 + rotateBecauseOfWidthHeightRatio);
+
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                return rotate(bitmap, 180 + rotateBecauseOfWidthHeightRatio);
+
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                return rotate(bitmap, 270 + rotateBecauseOfWidthHeightRatio);
+
+            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
+                return flip(bitmap, true, false);
+
+            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
+                return flip(bitmap, false, true);
+
+            default:
+                return rotate(bitmap, 0 + rotateBecauseOfWidthHeightRatio);
+        }
+    }
+
+    public static Bitmap rotate(Bitmap bitmap, float degrees) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(degrees);
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+    }
+
+    public static Bitmap flip(Bitmap bitmap, boolean horizontal, boolean vertical) {
+        Matrix matrix = new Matrix();
+        matrix.preScale(horizontal ? -1 : 1, vertical ? -1 : 1);
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+    }
+
+
 
     private File createImageFile() throws IOException {
         // Create an image file name
@@ -168,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         FloatingActionButton fabCamera = (FloatingActionButton) findViewById(R.id.fabCamera);
-        FloatingActionButton fabGallery = (FloatingActionButton) findViewById(R.id.fabCamera);
+        FloatingActionButton fabGallery = (FloatingActionButton) findViewById(R.id.fabGallery);
         fabCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -251,11 +302,13 @@ public class MainActivity extends AppCompatActivity {
         {
             transaction.replace(R.id.flayoutMainActivity, new MainFragment(), MAIN_FRAGMENT_TAG);
             findViewById(R.id.fabCamera).setVisibility(View.VISIBLE);
+            findViewById(R.id.fabGallery).setVisibility(View.VISIBLE);
         }
         else if(newFragmentType == FRAGMENT_TYPE.BOULDER_FRAGMENT)
         {
             transaction.replace(R.id.flayoutMainActivity, new BoulderFragment(), BOULDER_FRAGMENT_TAG);
             findViewById(R.id.fabCamera).setVisibility(View.INVISIBLE);
+            findViewById(R.id.fabGallery).setVisibility(View.INVISIBLE);
         }
 //        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS)
 //        {

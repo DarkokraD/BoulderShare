@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 
 import com.herak.bouldershare.MainActivity;
@@ -32,12 +33,18 @@ public class MyView extends View {
     HoldType currentHoldType = START_HOLD;
     Bitmap mBoulderBitmap;
 
+    ScaleGestureDetector scaleGestureDetector;
+
+    boolean isScale;
+    long lastScale;
+
     public MyView(Context context) {
         super(context);
         paint.setColor(Color.RED);
         paint.setStrokeWidth(15);
         paint.setStyle(Paint.Style.STROKE);
         this.mBoulderBitmap = ((MainActivity) context).getmBoulderBitmap();
+        scaleGestureDetector = new ScaleGestureDetector(context, new MyOnScaleGestureListener(this));
     }
 
 
@@ -62,46 +69,52 @@ public class MyView extends View {
                     paint.setColor(Color.MAGENTA);
                     break;
             }
-            canvas.drawCircle(hold.x, hold.y, circleRadius, paint);
+            canvas.drawCircle(hold.x, hold.y, hold.circleRadius, paint);
         }
 
     }
 
-    Long actionDownTimestamp;
+    long actionDownTimestamp;
     private final long LONG_PRESS_DURATION = 500;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                actionDownTimestamp = System.currentTimeMillis();
-                break;
-            case MotionEvent.ACTION_UP:
-                Hold hold = new Hold();
-                hold.x = event.getX();
-                hold.y = event.getY();
-                hold.type = currentHoldType;
+        scaleGestureDetector.onTouchEvent(event);
 
-                Hold existingHold = getExistingHold(hold);
+        if(event.getPointerCount() == 1) {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    actionDownTimestamp = System.currentTimeMillis();
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if(actionDownTimestamp > lastScale) {
+                        Hold hold = new Hold(event.getX(), event.getY());
+                        hold.type = currentHoldType;
+                        hold.circleRadius = circleRadius;
 
-                if(System.currentTimeMillis() - actionDownTimestamp < LONG_PRESS_DURATION) {
-                    //SHORT PRESS
-                    if(existingHold != null){
-                        //Hold exists already so remove it
-                        removeHold(existingHold);
-                    }else{
-                        holds.add(hold);
+                        Hold existingHold = getExistingHold(hold);
+                        if (System.currentTimeMillis() - actionDownTimestamp < LONG_PRESS_DURATION) {
+                            //SHORT PRESS
+                            if (existingHold != null) {
+                                //Hold exists already so remove it
+                                removeHold(existingHold);
+                            } else {
+                                holds.add(hold);
+                            }
+                            invalidate();
+                        } else {
+                            //LONG PRESS
+                            if (existingHold != null) {
+                                changeHoldType(existingHold);
+                            } else {
+                                holds.add(hold);
+                            }
+                            invalidate();
+                        }
                     }
-                }else{
-                    //LONG PRESS
-                    if(existingHold != null){
-                        changeHoldType(existingHold);
-                    }else{
-                        holds.add(hold);
-                    }
-                }
+                    break;
+            }
         }
-        invalidate();
         return true;
 
     }
@@ -130,7 +143,7 @@ public class MyView extends View {
 
     private Hold getExistingHold(Hold clickedHold) {
         for(Hold hold : holds){
-            if(clickedHold.distanceFrom(hold) <= circleRadius) return hold;
+            if(clickedHold.distanceFrom(hold) <= hold.circleRadius) return hold;
         }
         return null;
     }
@@ -146,5 +159,41 @@ public class MyView extends View {
 
 
         return bmp;
+    }
+
+    public class MyOnScaleGestureListener extends
+            ScaleGestureDetector.SimpleOnScaleGestureListener {
+        private MyView view;
+
+        public MyOnScaleGestureListener(MyView view){
+            this.view = view;
+        }
+
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            float focusX = detector.getFocusX();
+            float focusY = detector.getFocusY();
+
+            Hold existingHold = view.getExistingHold(new Hold(focusX, focusY));
+
+            if(existingHold != null) {
+                float scaleFactor = detector.getScaleFactor();
+                existingHold.circleRadius *= scaleFactor;
+                lastScale = System.currentTimeMillis();
+                invalidate();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean onScaleBegin(ScaleGestureDetector detector) {
+            return true;
+        }
+
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector) {
+
+        }
     }
 }
