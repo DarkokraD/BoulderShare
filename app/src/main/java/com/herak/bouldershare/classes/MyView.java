@@ -90,6 +90,7 @@ public class MyView extends View {
                     actionDownTimestamp = System.currentTimeMillis();
                     break;
                 case MotionEvent.ACTION_MOVE:
+                    //TODO find a more elegant solution for changing hold type
                     Hold currentPosition = new Hold(event.getX(), event.getY());
                     if(holdBeingMoved == null) holdBeingMoved = getExistingHold(currentPosition);
                     if(moveInitiated ||
