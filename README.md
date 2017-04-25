@@ -14,4 +14,4 @@ A simple app that lets you pick a photo from a gallery or take a photo with your
 Unsigned and untested, use at your own risk:
 [Alpha version (v0.1)] 
 
-[Alpha version (v0.1)]: https://github.com/DarkokraD/BoulderShare/blob/master/beta/com.herak.bouldershare.apk
+[Alpha version (v0.1)]: https://github.com/DarkokraD/BoulderShare/raw/master/beta/com.herak.bouldershare.apk
