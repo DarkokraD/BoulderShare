@@ -19,3 +19,6 @@
 	* Mark problems as tried
 3. Filtering by problem location (geo tags should be used if/when available)
 4. Add backend server that will store problems so users can load problems assigned to their climbing gym(s)
+
+# Very distant future (in a galaxy far, far away
+1. Augmented reality for presenting the problems live on the climbing wall
