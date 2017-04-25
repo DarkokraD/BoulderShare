@@ -75,18 +75,35 @@ public class MyView extends View {
 
     long actionDownTimestamp;
     private final long LONG_PRESS_DURATION = 500;
+    private boolean moveInitiated = false;
+    private Hold holdBeingMoved;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         scaleGestureDetector.onTouchEvent(event);
+
+
 
         if(event.getPointerCount() == 1) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     actionDownTimestamp = System.currentTimeMillis();
                     break;
+                case MotionEvent.ACTION_MOVE:
+                    Hold currentPosition = new Hold(event.getX(), event.getY());
+                    if(holdBeingMoved == null) holdBeingMoved = getExistingHold(currentPosition);
+                    if(moveInitiated ||
+                            System.currentTimeMillis()-actionDownTimestamp > 200 &&
+                            holdBeingMoved != null &&
+                            holdBeingMoved.distanceFrom(currentPosition) > 10){
+                        holdBeingMoved.x = currentPosition.x;
+                        holdBeingMoved.y = currentPosition.y;
+                        moveInitiated = true;
+                        invalidate();
+                    }
+                    break;
                 case MotionEvent.ACTION_UP:
-                    if(actionDownTimestamp > lastScale) {
+                    if(actionDownTimestamp > lastScale & !moveInitiated) {
                         Hold hold = new Hold(event.getX(), event.getY());
                         hold.type = currentHoldType;
                         hold.circleRadius = circleRadius;
@@ -111,6 +128,8 @@ public class MyView extends View {
                             invalidate();
                         }
                     }
+                    moveInitiated = false;
+                    holdBeingMoved = null;
                     break;
             }
         }

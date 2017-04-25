@@ -8,8 +8,10 @@
     tools:showIn="@layout/activity_main">
 
 <TextView
+    android:id="@+id/textViewInstructions"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:text="Ovo je glavni fragment"/>
+    android:textSize="16dp"
+    android:layout_margin="10dp"/>
 
 </android.support.constraint.ConstraintLayout>
