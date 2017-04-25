@@ -11,7 +11,7 @@ A simple app that lets you pick a photo from a gallery or take a photo with your
 - Once you're done share the image with your climbing buddies by clicking the Share icon
 
 # Get the latest alpha build
-Unsigned and untested, use at your own risk:
+Unsigned and untested, use at your own risk:    
 [Alpha version (v0.1)] 
 
-[Alpha version (v0.1)]: https://github.com/DarkokraD/BoulderShare/raw/master/beta/com.herak.bouldershare.apk
+[Alpha version (v0.1)]:https://github.com/DarkokraD/BoulderShare/raw/master/beta/com.herak.bouldershare.apk
