@@ -72,12 +72,12 @@ public class InfoFragment extends DialogFragment {
         View view = inflater.inflate(R.layout.fragment_info, null);
         EditText etAuthor = (EditText) view.findViewById(R.id.etInfoAuthor);
         etAuthor.setText(this.username);
-        NumberPicker gradePicker = (NumberPicker) view.findViewById(R.id.spinGrade);
+        NumberPicker gradePicker = (NumberPicker) view.findViewById(R.id.pickerGrade);
         String[] gradesArray = getResources().getStringArray(R.array.grades_array);
         gradePicker.setMinValue(0);
         gradePicker.setMaxValue(gradesArray.length-1);
         gradePicker.setDisplayedValues(gradesArray);
-        gradePicker.setValue(4);
+        gradePicker.setValue(5);
 
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout

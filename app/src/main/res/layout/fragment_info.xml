@@ -40,12 +40,6 @@
 
     </android.support.design.widget.TextInputLayout>
 
-    <NumberPicker
-        android:id="@+id/spinGrade"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        />
-
     <android.support.design.widget.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -63,5 +57,30 @@
             android:maxLength="160"/>
 
     </android.support.design.widget.TextInputLayout>
+    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <NumberPicker
+            android:id="@+id/pickerGrade"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/grade_label"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@id/pickerGrade"
+            android:layout_toLeftOf="@id/pickerGrade"
+            android:layout_marginRight="20dp"
+            android:textSize="18sp"
+            />
+
+
+        </RelativeLayout>
 
 </LinearLayout>

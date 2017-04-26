@@ -9,10 +9,11 @@
     <string name="ok">Ok</string>
     <string name="action_info">Settings</string>
     <string name="comment">Comment</string>
-    <string name="grades_prompt">Grade</string>
+    <string name="grade_label">Grade</string>
     <string name="problem_name">Problem name</string>
 
     <string-array name="grades_array">
+        <item>N/A</item>
         <item>4</item>
         <item>5</item>
         <item>6A</item>
