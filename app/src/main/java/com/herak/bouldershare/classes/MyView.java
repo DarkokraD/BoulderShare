@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
@@ -34,8 +35,12 @@ public class MyView extends View {
     Bitmap mBoulderBitmap;
 
     ScaleGestureDetector scaleGestureDetector;
+    GestureDetector mGestureDetector;
+    boolean scaleOngoing;
 
     long lastScale;
+
+
 
     public MyView(Context context) {
         super(context);
@@ -44,6 +49,7 @@ public class MyView extends View {
         paint.setStyle(Paint.Style.STROKE);
         this.mBoulderBitmap = ((MainActivity) context).getmBoulderBitmap();
         scaleGestureDetector = new ScaleGestureDetector(context, new MyOnScaleGestureListener(this));
+        mGestureDetector = new GestureDetector(context, new GestureListener());
     }
 
 
@@ -81,7 +87,7 @@ public class MyView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         scaleGestureDetector.onTouchEvent(event);
-
+        mGestureDetector.onTouchEvent(event);
 
 
         if(event.getPointerCount() == 1) {
@@ -90,7 +96,6 @@ public class MyView extends View {
                     actionDownTimestamp = System.currentTimeMillis();
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    //TODO find a more elegant solution for changing hold type
                     Hold currentPosition = new Hold(event.getX(), event.getY());
                     if(holdBeingMoved == null) holdBeingMoved = getExistingHold(currentPosition);
                     if(moveInitiated ||
@@ -104,31 +109,31 @@ public class MyView extends View {
                     }
                     break;
                 case MotionEvent.ACTION_UP:
-                    if(actionDownTimestamp > lastScale & !moveInitiated) {
-                        Hold hold = new Hold(event.getX(), event.getY());
-                        hold.type = currentHoldType;
-                        hold.circleRadius = circleRadius;
-
-                        Hold existingHold = getExistingHold(hold);
-                        if (System.currentTimeMillis() - actionDownTimestamp < LONG_PRESS_DURATION) {
-                            //SHORT PRESS
-                            if (existingHold != null) {
-                                //Hold exists already so remove it
-                                removeHold(existingHold);
-                            } else {
-                                holds.add(hold);
-                            }
-                            invalidate();
-                        } else {
-                            //LONG PRESS
-                            if (existingHold != null) {
-                                changeHoldType(existingHold);
-                            } else {
-                                holds.add(hold);
-                            }
-                            invalidate();
-                        }
-                    }
+//                    if(actionDownTimestamp > lastScale & !moveInitiated) {
+//                        Hold hold = new Hold(event.getX(), event.getY());
+//                        hold.type = currentHoldType;
+//                        hold.circleRadius = circleRadius;
+//
+//                        Hold existingHold = getExistingHold(hold);
+//                        if (System.currentTimeMillis() - actionDownTimestamp < LONG_PRESS_DURATION) {
+//                            //SHORT PRESS
+//                            if (existingHold != null) {
+//                                //Hold exists already so remove it
+//                                removeHold(existingHold);
+//                            } else {
+//                                holds.add(hold);
+//                            }
+//                            invalidate();
+//                        } else {
+//                            //LONG PRESS
+//                            if (existingHold != null) {
+//                                changeHoldType(existingHold);
+//                            } else {
+//                                holds.add(hold);
+//                            }
+//                            invalidate();
+//                        }
+//                    }
                     moveInitiated = false;
                     holdBeingMoved = null;
                     break;
@@ -180,6 +185,67 @@ public class MyView extends View {
         return bmp;
     }
 
+    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
+        float velocityY) {
+
+            return false;
+        }
+
+        @Override
+        public boolean onSingleTapConfirmed(MotionEvent e) {
+            Hold hold = new Hold(e.getX(), e.getY());
+            hold.type = currentHoldType;
+            hold.circleRadius = circleRadius;
+
+            Hold existingHold = getExistingHold(hold);
+
+            if (existingHold != null) {
+                //Hold exists already so remove it
+                removeHold(existingHold);
+            } else {
+                holds.add(hold);
+            }
+            invalidate();
+
+            return super.onSingleTapUp(e);
+
+        }
+
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            Hold hold = new Hold(e.getX(), e.getY());
+            hold.type = currentHoldType;
+            hold.circleRadius = circleRadius;
+
+            Hold existingHold = getExistingHold(hold);
+
+            if (existingHold != null) {
+                changeHoldType(existingHold);
+                invalidate();
+            }
+
+            return super.onDoubleTap(e);
+        }
+
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return super.onDown(e);
+        }
+
+        @Override
+        public void onLongPress(MotionEvent e) {
+            super.onLongPress(e);
+        }
+
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2,
+        float distanceX, float distanceY) {
+            return super.onScroll(e1, e2, distanceX, distanceY);
+        }
+    }
+
     public class MyOnScaleGestureListener extends
             ScaleGestureDetector.SimpleOnScaleGestureListener {
         private MyView view;
@@ -207,12 +273,13 @@ public class MyView extends View {
 
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
+            scaleOngoing = true;
             return true;
         }
 
         @Override
         public void onScaleEnd(ScaleGestureDetector detector) {
-
+            scaleOngoing = false;
         }
     }
 }
