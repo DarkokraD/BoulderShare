@@ -3,6 +3,7 @@ package com.herak.bouldershare;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -41,6 +42,7 @@ import static android.R.attr.rotation;
 
 public class MainActivity extends AppCompatActivity {
 
+    public static final String PREFS_NAME = "BoulderSharePrefs";
     static final int REQUEST_IMAGE_CAPTURE = 1;
     static final int RESULT_LOAD_IMG = 2;
     static final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 3;
@@ -242,6 +244,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+
+        //TODO code that edits the shared preferences to store the app settings
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        String username = settings.getString("username", "BoulderShare user");
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("username", username);
 
         FloatingActionButton fabCamera = (FloatingActionButton) findViewById(R.id.fabCamera);
         FloatingActionButton fabGallery = (FloatingActionButton) findViewById(R.id.fabGallery);
