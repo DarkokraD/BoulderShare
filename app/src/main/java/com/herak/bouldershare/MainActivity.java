@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
             AsyncTask fileTask = new AsyncTask() {
                 @Override
                 protected Object doInBackground(Object[] objects) {
-                    File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare" + File.separator + "Input Photos");
+                    File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Input");
 
                     if (!directory.exists()) {
                         directory.mkdirs();
@@ -293,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
             AsyncTask fileTask = new AsyncTask() {
                 @Override
                 protected Object doInBackground(Object[] objects) {
-                    File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare" + File.separator + "Created Problems");
+                    File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
 
                     if (!directory.exists()) {
                         directory.mkdirs();
