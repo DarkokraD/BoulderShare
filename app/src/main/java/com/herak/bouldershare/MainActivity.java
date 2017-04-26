@@ -17,6 +17,7 @@ import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.media.ExifInterface;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
@@ -29,6 +30,9 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.herak.bouldershare.classes.MyView;
+import com.herak.bouldershare.fragments.BoulderFragment;
+import com.herak.bouldershare.fragments.InfoFragment;
+import com.herak.bouldershare.fragments.MainFragment;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -40,7 +44,8 @@ import java.util.Date;
 
 import static android.R.attr.rotation;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+    implements InfoFragment.OnSettingsStoredListener{
 
     public static final String PREFS_NAME = "BoulderSharePrefs";
     static final int REQUEST_IMAGE_CAPTURE = 1;
@@ -247,10 +252,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         //TODO code that edits the shared preferences to store the app settings
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        String username = settings.getString("username", "BoulderShare user");
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putString("username", username);
+
 
         FloatingActionButton fabCamera = (FloatingActionButton) findViewById(R.id.fabCamera);
         FloatingActionButton fabGallery = (FloatingActionButton) findViewById(R.id.fabGallery);
@@ -294,7 +296,12 @@ public class MainActivity extends AppCompatActivity {
         final MainActivity self = this;
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_share) {
+        if (id == R.id.action_info) {
+            DialogFragment dialog = new InfoFragment();
+            dialog.show(getSupportFragmentManager(), "Settings Fragment");
+
+        }else if (id == R.id.action_share) {
+
             checkAndGetWritePermission();
             final Context context = this;
             mBoulderBitmap = ((MyView) findViewById(R.id.myView)).getBitmap();
@@ -381,7 +388,12 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public enum FRAGMENT_TYPE {MAIN_FRAGMENT, BOULDER_FRAGMENT};
+    @Override
+    public void onSettingsStoredInteraction(SharedPreferences settings) {
+
+    }
+
+    public enum FRAGMENT_TYPE {MAIN_FRAGMENT, BOULDER_FRAGMENT, SETTINGS_FRAGMENT};
     public final String MAIN_FRAGMENT_TAG = "MAIN_FRAGMENT_TAG";
     public final String BOULDER_FRAGMENT_TAG = "BOULDER_FRAGMENT_TAG";
 
@@ -403,9 +415,9 @@ public class MainActivity extends AppCompatActivity {
             findViewById(R.id.fabCamera).setVisibility(View.INVISIBLE);
             findViewById(R.id.fabGallery).setVisibility(View.INVISIBLE);
         }
-//        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS)
+//        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS_FRAGMENT)
 //        {
-//            transaction.replace(R.id.flayoutMainActivity,new SettingsFragment());
+//
 //        }
 
 

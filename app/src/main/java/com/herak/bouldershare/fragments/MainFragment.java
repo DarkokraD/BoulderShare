@@ -1,4 +1,4 @@
-package com.herak.bouldershare;
+package com.herak.bouldershare.fragments;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -8,6 +8,8 @@ import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import com.herak.bouldershare.R;
 
 /**
  * A placeholder fragment containing a simple view.

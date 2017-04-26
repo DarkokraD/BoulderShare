@@ -1,4 +1,4 @@
-package com.herak.bouldershare;
+package com.herak.bouldershare.fragments;
 
 import android.content.Context;
 import android.content.Intent;
@@ -20,6 +20,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import com.herak.bouldershare.MainActivity;
+import com.herak.bouldershare.R;
 import com.herak.bouldershare.classes.MyView;
 import com.herak.bouldershare.enums.HoldType;
 

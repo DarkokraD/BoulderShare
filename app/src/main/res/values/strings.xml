@@ -1,4 +1,37 @@
 <resources>
     <string name="app_name">BoulderShare</string>
     <string name="action_share">Share</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="author">Author (nickname)</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">Ok</string>
+    <string name="action_info">Settings</string>
+    <string name="comment">Comment</string>
+    <string name="grades_prompt">Grade</string>
+    <string name="problem_name">Problem name</string>
+
+    <string-array name="grades_array">
+        <item>4</item>
+        <item>5</item>
+        <item>6A</item>
+        <item>6A+</item>
+        <item>6B</item>
+        <item>6B+</item>
+        <item>6C</item>
+        <item>6C+</item>
+        <item>7A</item>
+        <item>7A+</item>
+        <item>7B</item>
+        <item>7B+</item>
+        <item>7C</item>
+        <item>7C+</item>
+        <item>8A</item>
+        <item>8A+</item>
+        <item>8B</item>
+        <item>8B+</item>
+        <item>8C</item>
+        <item>8C+</item>
+    </string-array>
 </resources>
