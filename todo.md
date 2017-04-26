@@ -1,6 +1,6 @@
 # Missing features
-1. store images from camera intent to local storage
-2. store images from the share intent to local storage (separate folder from the camera intent ones)
+1. ~~store images from camera intent to local storage~~
+2. ~~store images from the share intent to local storage (separate folder from the camera intent ones)~~
 3. add images to gallery
 4. add text overlay with the following data:
 	* Problem name
