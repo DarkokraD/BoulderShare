@@ -52,7 +52,7 @@ public class BoulderFragment extends Fragment {
         BoulderProblemView myView = new BoulderProblemView(mainActivity);
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
         myView.setLayoutParams(layoutParams);
-        myView.setId(R.id.myView);
+        myView.setId(R.id.boulderProblemView);
 
         myView.setMinimumHeight(linearLayout.getHeight());
         myView.setMinimumWidth(linearLayout.getWidth());
@@ -90,7 +90,7 @@ public class BoulderFragment extends Fragment {
             mainActivity.checkAndGetWritePermission();
 
             final Context context = mainActivity;
-            mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.myView)).getBitmap();
+            mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
 
             AsyncTask fileTask = new AsyncTask() {
                 @Override

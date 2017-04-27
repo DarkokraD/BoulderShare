@@ -21,8 +21,6 @@ import com.herak.bouldershare.classes.BoulderProblemInfo;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.herak.bouldershare.MainActivity.PREFS_NAME;
-
 /**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
@@ -61,11 +59,6 @@ public class InfoFragment extends DialogFragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        this.settings = getActivity().getApplicationContext().getSharedPreferences(PREFS_NAME, 0);
-        this.username = settings.getString("username", null);
-        this.settingsEditor = settings.edit();
-
-
     }
 
     @Override
@@ -75,6 +68,8 @@ public class InfoFragment extends DialogFragment {
         LayoutInflater inflater = getActivity().getLayoutInflater();
         MainActivity mainActivity = (MainActivity) getActivity();
         View view = inflater.inflate(R.layout.fragment_info, null);
+        settings = mainActivity.getSharedPreferences(MainActivity.PREFS_NAME, 0);
+        settingsEditor = settings.edit();
 
         final NumberPicker gradePicker = (NumberPicker) view.findViewById(R.id.pickerGrade);
         final List<String> gradesArray = Arrays.asList(getResources().getStringArray(R.array.grades_array));
@@ -88,7 +83,7 @@ public class InfoFragment extends DialogFragment {
             if (mBoulderProblemInfo.getAuthor() != null && !mBoulderProblemInfo.getAuthor().equals("")) {
                 etAuthor.setText(mBoulderProblemInfo.getAuthor());
             } else {
-                etAuthor.setText(this.username);
+                etAuthor.setText(settings.getString("username", null));
             }
 
             EditText etName = (EditText) view.findViewById(R.id.etInfoProblemName);

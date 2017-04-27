@@ -291,7 +291,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onInfoStoredInteraction(BoulderProblemInfo info) {
         mBoulderProblemInfo = info;
-        findViewById(R.id.myView).invalidate();
+        findViewById(R.id.boulderProblemView).invalidate();
     }
 
 
@@ -316,6 +316,7 @@ public class MainActivity extends AppCompatActivity
             transaction.replace(R.id.flayoutMainActivity, new BoulderFragment(), BOULDER_FRAGMENT_TAG);
             findViewById(R.id.fabCamera).setVisibility(View.INVISIBLE);
             findViewById(R.id.fabGallery).setVisibility(View.INVISIBLE);
+            mBoulderProblemInfo = new BoulderProblemInfo();
         }
 //        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS_FRAGMENT)
 //        {

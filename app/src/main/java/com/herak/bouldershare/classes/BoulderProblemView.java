@@ -97,12 +97,14 @@ public class BoulderProblemView extends View {
             if(mBoulderProblemInfo != null){
                 LinearLayout layout = new LinearLayout(mainActivity);
 
+                Typeface roboto = Typeface.createFromAsset(mainActivity.getResources().getAssets(), "font/Roboto-Medium.ttf");
+
                 TextView textView = new TextView(mainActivity);
                 textView.setText(getInfo(mBoulderProblemInfo));
                 textView.setVisibility(View.VISIBLE);
                 textView.setBackgroundColor(Color.argb(180, 30, 30, 30));
                 textView.setTextColor(Color.parseColor("#45BBDC"));
-                textView.setTypeface(Typeface.create("Roboto", Typeface.NORMAL), Typeface.NORMAL);
+                textView.setTypeface(roboto);
                 textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
                 textView.setPadding(10, 10, 10, 10);
                 textView.setWidth(canvas.getWidth());
