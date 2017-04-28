@@ -2,12 +2,12 @@
 1. ~~store images from camera intent to local storage~~
 2. ~~store images from the share intent to local storage (separate folder from the camera intent ones)~~
 3. ~~add images to gallery~~
-4. ~~add text overlay with the following data:
-	* Problem name
-	* Author
-	* Grade
-	* Comment
-	* Location?~~
+4. ~~add text overlay with the following data:~~
+	~~* Problem name~~
+	~~* Author~~
+	~~* Grade~~
+	~~* Comment~~
+	~~* Location?~~
 5. store original input bitmaps along with all the data needed to recreate each created problem (all hold markers, comments, grade, etc.) to enable editing existing problems
 6. display a list of previously created problems so the users can load, modify and share them
 7. ~~add settings fragment that will allow the user to store their nickname that will be displayed on problems they create (Author) and possible future settings (default gym, etc)~~
