@@ -18,6 +18,7 @@ import android.widget.TextView;
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.enums.HoldType;
 
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,9 +34,9 @@ public class BoulderProblemView extends View {
 
     private List<Hold> holds = new ArrayList<Hold>();
 
-    private Paint paint = new Paint();
-    private Paint textPaint = new Paint();
+    private Paint paint;
     private int circleRadius;
+    private int minCircleRadius;
 
     HoldType currentHoldType = START_HOLD;
     Bitmap mBoulderBitmap;
@@ -48,31 +49,36 @@ public class BoulderProblemView extends View {
 
     private BoulderProblemInfo mBoulderProblemInfo;
     MainActivity mainActivity;
-
-
+    private Bitmap mScaledBitmap;
+    private double mScaleFactor;
 
     public BoulderProblemView(Context context) {
         super(context);
-        paint.setColor(Color.RED);
-        paint.setStrokeWidth(15);
-        paint.setStyle(Paint.Style.STROKE);
+        paint = new Paint();
+
         this.mainActivity = (MainActivity) context;
         this.mBoulderBitmap = mainActivity.getmBoulderBitmap();
+        this.mScaleFactor = 0;
         this.mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
         scaleGestureDetector = new ScaleGestureDetector(context, new MyOnScaleGestureListener(this));
         mGestureDetector = new GestureDetector(context, new GestureListener());
+
     }
 
+    public Canvas drawOnCustomCanvas(Canvas canvas){
+        drawOnCanvas(canvas, mScaleFactor);
 
+        return canvas;
+    }
 
-    @Override
-    protected void onDraw(Canvas canvas) {
-        Bitmap scaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), canvas.getWidth(), canvas.getHeight(), true);
-        canvas.drawBitmap(scaledBitmap, 0, 0, paint);
+    private void drawOnCanvas(Canvas canvas, double scaleFactor) {
         if(mainActivity != null) {
             mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
         }
         circleRadius = Math.round(canvas.getHeight() / 25f);
+        minCircleRadius = Math.round(circleRadius / 2f);
+        paint.setStrokeWidth(Math.round(canvas.getHeight() / 160f));
+        paint.setStyle(Paint.Style.STROKE);
 
         for(Hold hold : holds){
             switch(hold.type){
@@ -86,15 +92,15 @@ public class BoulderProblemView extends View {
                     paint.setColor(Color.MAGENTA);
                     break;
             }
-            canvas.drawCircle(hold.x, hold.y, hold.circleRadius, paint);
+            canvas.drawCircle((int) (hold.x * scaleFactor), (int) (hold.y * scaleFactor), (int) (hold.circleRadius * scaleFactor), paint);
         }
 
         if(mBoulderProblemInfo != null){
 
-            textPaint.setColor(Color.BLACK);
-            textPaint.setAlpha(180);
-            textPaint.setTextSize(100);
-            if(mBoulderProblemInfo != null){
+            if(mBoulderProblemInfo.getAuthor() != null
+                    || mBoulderProblemInfo.getName() != null
+                    || mBoulderProblemInfo.getGrade() != null
+                    || mBoulderProblemInfo.getComment() != null ){
                 LinearLayout layout = new LinearLayout(mainActivity);
 
                 Typeface roboto = Typeface.createFromAsset(mainActivity.getResources().getAssets(), "font/Roboto-Medium.ttf");
@@ -105,21 +111,38 @@ public class BoulderProblemView extends View {
                 textView.setBackgroundColor(Color.argb(180, 30, 30, 30));
                 textView.setTextColor(Color.parseColor("#45BBDC"));
                 textView.setTypeface(roboto);
-                textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, (int) (16 * scaleFactor));
                 textView.setPadding(10, 10, 10, 10);
-                textView.setWidth(canvas.getWidth());
+                if(scaleFactor == 1){
+                    textView.setWidth(mScaledBitmap.getWidth());
+                }else{
+                    textView.setWidth(canvas.getWidth());
+                }
                 textView.setGravity(Gravity.CENTER);
+
 
                 layout.addView(textView);
                 layout.measure(canvas.getWidth(), canvas.getHeight());
                 layout.layout(0, 0, canvas.getWidth(), canvas.getHeight());
 //                canvas.translate(0, 0);
                 layout.draw(canvas);
-
-
-                //canvas.drawText(text, 100, 100, textPaint);
             }
         }
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        if(mScaledBitmap == null){
+            if(mBoulderBitmap.getWidth()/canvas.getWidth() > mBoulderBitmap.getHeight()/canvas.getHeight()){
+                mScaleFactor = (double) mBoulderBitmap.getWidth()/canvas.getWidth();
+            }else{
+                mScaleFactor = (double) mBoulderBitmap.getHeight()/canvas.getHeight();
+            }
+            mScaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), (int) (mBoulderBitmap.getWidth()/mScaleFactor), (int) (mBoulderBitmap.getHeight()/mScaleFactor), true);
+        }
+
+        canvas.drawBitmap(mScaledBitmap, 0, 0, paint);
+        drawOnCanvas(canvas, 1);
 
     }
 
@@ -336,10 +359,12 @@ public class BoulderProblemView extends View {
 
             if(existingHold != null) {
                 float scaleFactor = detector.getScaleFactor();
-                existingHold.circleRadius *= scaleFactor;
-                lastScale = System.currentTimeMillis();
-                invalidate();
-                return true;
+                if(existingHold.circleRadius * scaleFactor > minCircleRadius) {
+                    existingHold.circleRadius *= scaleFactor;
+                    lastScale = System.currentTimeMillis();
+                    invalidate();
+                    return true;
+                }
             }
             return false;
         }

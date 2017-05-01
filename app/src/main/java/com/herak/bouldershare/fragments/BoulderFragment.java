@@ -3,6 +3,7 @@ package com.herak.bouldershare.fragments;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -12,13 +13,14 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
@@ -48,19 +50,21 @@ public class BoulderFragment extends Fragment {
         setHasOptionsMenu(true);
 
         MainActivity mainActivity = (MainActivity) getActivity();
-        LinearLayout linearLayout = (LinearLayout) view.findViewById(R.id.llBoulderFragment);
+        RelativeLayout relativeLayout = (RelativeLayout) view.findViewById(R.id.rlBoulderFragment);
+        relativeLayout.setGravity(Gravity.CENTER);
         BoulderProblemView myView = new BoulderProblemView(mainActivity);
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
         myView.setLayoutParams(layoutParams);
         myView.setId(R.id.boulderProblemView);
 
-        myView.setMinimumHeight(linearLayout.getHeight());
-        myView.setMinimumWidth(linearLayout.getWidth());
+        mBoulderBitmap = mainActivity.getmBoulderBitmap();
+
+        myView.setMinimumHeight(relativeLayout.getHeight());
+        myView.setMinimumWidth(relativeLayout.getWidth());
         myView.setLongClickable(true);
 
 
-        linearLayout.addView(myView);
-        mBoulderBitmap = mainActivity.getmBoulderBitmap();
+        relativeLayout.addView(myView);
 
         return view;
     }
@@ -89,8 +93,14 @@ public class BoulderFragment extends Fragment {
 
             mainActivity.checkAndGetWritePermission();
 
+            final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
+
+            Canvas canvas = new Canvas(resultBitmap);
+            canvas = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).drawOnCustomCanvas(canvas);
+
+
             final Context context = mainActivity;
-            mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
+            //mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
 
             AsyncTask fileTask = new AsyncTask() {
                 @Override
@@ -110,7 +120,7 @@ public class BoulderFragment extends Fragment {
                     }
                     try {
                         FileOutputStream out = new FileOutputStream(pictureFile);
-                        mBoulderBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                        resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
                         out.close();
                     } catch (Exception e) {
                         e.printStackTrace();
