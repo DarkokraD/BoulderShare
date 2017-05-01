@@ -15,7 +15,9 @@
     <string-array name="grades_array">
         <item>Unknown</item>
         <item>4</item>
+        <item>4+</item>
         <item>5</item>
+        <item>5+</item>
         <item>6A</item>
         <item>6A+</item>
         <item>6B</item>

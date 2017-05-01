@@ -1,5 +1,7 @@
 package com.herak.bouldershare.classes;
 
+import android.net.Uri;
+
 /**
  * Created by Herak on 27.4.2017..
  */
@@ -9,6 +11,7 @@ public class BoulderProblemInfo {
     private String name;
     private String comment;
     private String grade;
+    private Uri inputBitmapUri;
 
     public BoulderProblemInfo(){
 
@@ -19,6 +22,14 @@ public class BoulderProblemInfo {
         this.name = name;
         this.comment = comment;
         this.grade = grade;
+    }
+
+    public Uri getInputBitmapUri() {
+        return inputBitmapUri;
+    }
+
+    public void setInputBitmapUri(Uri inputBitmapUri) {
+        this.inputBitmapUri = inputBitmapUri;
     }
 
     public String getAuthor() {
