@@ -1,6 +1,6 @@
 # Bug fixes
-1. Stop the skewing of the photos - keep aspect ratio of the original photo.
-2. Remember the scaling (x & y axis) and once sharing draw everything on a new canvas which is the size of the original photo.
+1. ~~Stop the skewing of the photos - keep aspect ratio of the original photo.~~
+2. ~~Remember the scaling (x & y axis) and once sharing draw everything on a new canvas which is the size of the original photo.~~
 
 # Missing features
 1. ~~store images from camera intent to local storage~~
