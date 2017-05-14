@@ -10,8 +10,5 @@ A simple app that lets you pick a photo from a gallery or take a photo with your
 - Move the hold by pressing inside the hold for 200ms and moving the finger around
 - Once you're done share the image with your climbing buddies by clicking the Share icon
 
-# Get the latest alpha build
-Unsigned and untested, use at your own risk:    
-[Alpha version (v0.1)] 
-
-[Alpha version (v0.1)]:https://github.com/DarkokraD/BoulderShare/raw/master/beta/com.herak.bouldershare.apk
+# Get the latest beta build
+Go to the Google Play Store: https://play.google.com/store/apps/details?id=com.herak.bouldershare
