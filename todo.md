@@ -1,6 +1,6 @@
 # Bug fixes
-1. Stop the skewing of the photos - keep aspect ratio of the original photo.
-2. Remember the scaling (x & y axis) and once sharing draw everything on a new canvas which is the size of the original photo.
+1. ~~Stop the skewing of the photos - keep aspect ratio of the original photo.~~
+2. ~~Remember the scaling (x & y axis) and once sharing draw everything on a new canvas which is the size of the original photo.~~
 
 # Missing features
 1. ~~store images from camera intent to local storage~~
@@ -24,5 +24,5 @@
 3. Filtering by problem location (geo tags should be used if/when available)
 4. Add backend server that will store problems so users can load problems assigned to their climbing gym(s)
 
-# Very distant future (in a galaxy far, far away
+# Very distant future (in a galaxy far, far away)
 1. Augmented reality for presenting the problems live on the climbing wall
