@@ -21,6 +21,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
@@ -106,6 +107,7 @@ public class BoulderFragment extends Fragment {
                 @Override
                 protected Object doInBackground(Object[] objects) {
                     File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
+                    Object result = null;
 
                     if (!directory.exists()) {
                         directory.mkdirs();
@@ -122,6 +124,7 @@ public class BoulderFragment extends Fragment {
                         FileOutputStream out = new FileOutputStream(pictureFile);
                         resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
                         out.close();
+                        result = "Image saved";
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -146,7 +149,15 @@ public class BoulderFragment extends Fragment {
                         shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
                         startActivity(Intent.createChooser(shareIntent, "Choose an app"));
                     }
-                    return null;
+                    return result;
+                }
+
+                @Override
+                protected void onPostExecute(Object o) {
+                    if(o != null){
+                        Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
+                    }
+                    super.onPostExecute(o);
                 }
             };
             fileTask.execute();
