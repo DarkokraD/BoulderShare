@@ -1,6 +1,7 @@
 package com.herak.bouldershare;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -68,7 +69,7 @@ public class MainActivity extends AppCompatActivity
             File file = new File(mCurrentPhotoPath);
             Uri uri = Uri.fromFile(file);
             mBoulderBitmap = BitmapFactory.decodeFile(uri.getPath());            //MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
-            final MainActivity self = this;
+            final Context context = this;
 
 
             checkAndGetWritePermission();
@@ -99,7 +100,7 @@ public class MainActivity extends AppCompatActivity
 
                     // Tell the media scanner about the new file so that it is
                     // immediately available to the user.
-                    MediaScannerConnection.scanFile(self, new String[] { pictureFile.toString() }, null,
+                    MediaScannerConnection.scanFile(context, new String[] { pictureFile.toString() }, null,
                             new MediaScannerConnection.OnScanCompletedListener() {
                                 public void onScanCompleted(String path, Uri uri) {
                                     Log.i("ExternalStorage", "Scanned " + path + ":");
@@ -109,6 +110,7 @@ public class MainActivity extends AppCompatActivity
                     return null;
                 }
             };
+
             fileTask.execute();
 
             try {
