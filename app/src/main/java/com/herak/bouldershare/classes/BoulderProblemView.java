@@ -141,6 +141,8 @@ public class BoulderProblemView extends View {
             mScaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), (int) (mBoulderBitmap.getWidth()/mScaleFactor), (int) (mBoulderBitmap.getHeight()/mScaleFactor), true);
         }
 
+        mBoulderProblemInfo.setHolds(holds); //TODO decide if this should be moved somewhere done not as often (i.e. on database save
+
         canvas.drawBitmap(mScaledBitmap, 0, 0, paint);
         drawOnCanvas(canvas, 1);
 
