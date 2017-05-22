@@ -46,8 +46,11 @@ public class BoulderDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + BoulderProblemContract.BoulderProblemInfoEntry.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + BoulderProblemContract.HoldsEntry.TABLE_NAME);
-        onCreate(db);
+
+// This code would delete the tables and recreate them. Use alter table to add columns instead
+        //https://www.sqlite.org/lang_altertable.html
+//        db.execSQL("DROP TABLE IF EXISTS " + BoulderProblemContract.BoulderProblemInfoEntry.TABLE_NAME);
+//        db.execSQL("DROP TABLE IF EXISTS " + BoulderProblemContract.HoldsEntry.TABLE_NAME);
+//        onCreate(db);
     }
 }
