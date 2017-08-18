@@ -27,6 +27,11 @@
             </intent-filter>
         </activity>
 
+        <provider
+            android:authorities="com.herak.bouldershare"
+            android:name=".data.BoulderProvider">
+
+        </provider>
 
         <provider
             android:name="android.support.v4.content.FileProvider"
