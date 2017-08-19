@@ -47,6 +47,10 @@ public final class BoulderContract {
             return ContentUris.withAppendedId(CONTENT_URI, id);
         }
 
+        public static String getBoulderProblemIdFromUri(Uri uri) {
+            return uri.getPathSegments().get(1);
+        }
+
         public static final String TABLE_NAME = "boulder_problem";
         public static final String COLUMN_AUTHOR = "author";
         public static final String COLUMN_NAME = "name";
@@ -75,6 +79,10 @@ public final class BoulderContract {
                     .appendQueryParameter(COLUMN_BOULDER_PROBLEM_ID, Long.toString(boulder_id))
                     .build();
         };
+
+        public static String getBoulderProblemIdFromUri(Uri uri) {
+            return uri.getPathSegments().get(1);
+        }
 
         public static final String TABLE_NAME = "holds";
         public static final String COLUMN_BOULDER_PROBLEM_ID = "boulder_id";
