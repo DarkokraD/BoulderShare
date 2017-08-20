@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 
 public class BoulderDbHelper extends SQLiteOpenHelper {
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     static final String DATABASE_NAME = "boulder.db";
 
@@ -44,6 +44,9 @@ public class BoulderDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            final String SQL_ALTER_BOULDER_TABLE = "ALTER TABLE " + BoulderContract.BoulderProblemInfoEntry.TABLE_NAME
+                    + " ADD COLUMN " + BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI + ";";
+        db.execSQL(SQL_ALTER_BOULDER_TABLE);
 
 // This code would delete the tables and recreate them. Use alter table to add columns instead
         //https://www.sqlite.org/lang_altertable.html

@@ -1,11 +1,13 @@
 package com.herak.bouldershare.classes;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -16,6 +18,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.herak.bouldershare.MainActivity;
+import com.herak.bouldershare.data.BoulderContract;
+import com.herak.bouldershare.data.BoulderProvider;
 import com.herak.bouldershare.enums.HoldType;
 
 import java.security.KeyStore;
@@ -52,6 +56,20 @@ public class BoulderProblemView extends View {
     private Bitmap mScaledBitmap;
     private double mScaleFactor;
 
+    public BoulderProblemInfo getBoulderProblemInfo() {
+        return mBoulderProblemInfo;
+    }
+
+    public void setBoulderProblemInfo(BoulderProblemInfo mBoulderProblemInfo) {
+        this.mBoulderProblemInfo = mBoulderProblemInfo;
+    }
+
+    private void updateBoulderProblemInfo(){
+
+    }
+
+
+
     public BoulderProblemView(Context context) {
         super(context);
         paint = new Paint();
@@ -60,6 +78,7 @@ public class BoulderProblemView extends View {
         this.mBoulderBitmap = mainActivity.getmBoulderBitmap();
         this.mScaleFactor = 0;
         this.mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
+//        this.mBoulderProblemInfo.setInputBitmapUri(mainActivity.getmBoulderBitmapUri());
         scaleGestureDetector = new ScaleGestureDetector(context, new MyOnScaleGestureListener(this));
         mGestureDetector = new GestureDetector(context, new GestureListener());
 
@@ -141,7 +160,7 @@ public class BoulderProblemView extends View {
             mScaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), (int) (mBoulderBitmap.getWidth()/mScaleFactor), (int) (mBoulderBitmap.getHeight()/mScaleFactor), true);
         }
 
-        mBoulderProblemInfo.setHolds(holds); //TODO decide if this should be moved somewhere done not as often (i.e. on database save
+        mBoulderProblemInfo.setHolds(holds); //TODO decide if this should be moved somewhere done not as often (i.e. on database save)
 
         canvas.drawBitmap(mScaledBitmap, 0, 0, paint);
         drawOnCanvas(canvas, 1);

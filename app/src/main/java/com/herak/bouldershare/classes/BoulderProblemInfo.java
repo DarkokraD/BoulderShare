@@ -9,11 +9,13 @@ import java.util.List;
  */
 
 public class BoulderProblemInfo {
+    private Long id;
     private String author;
     private String name;
     private String comment;
     private String grade;
     private Uri inputBitmapUri;
+    private Uri finalBitmapUri;
     private List<Hold> holds;
 
     public BoulderProblemInfo(){
@@ -74,4 +76,24 @@ public class BoulderProblemInfo {
     public void setGrade(String grade) {
         this.grade = grade;
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Uri getFinalBitmapUri() {
+        return finalBitmapUri;
+    }
+
+    public void setFinalBitmapUri(Uri finalBitmapUri) {
+        this.finalBitmapUri = finalBitmapUri;
+    }
+
+
+
+
 }

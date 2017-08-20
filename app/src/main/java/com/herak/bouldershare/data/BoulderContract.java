@@ -26,7 +26,7 @@ public final class BoulderContract {
     // looking at weather data. content://com.example.android.sunshine.app/givemeroot/ will fail,
     // as the ContentProvider hasn't been given any information on what to do with "givemeroot".
     // At least, let's hope not.  Don't be that dev, reader.  Don't be that dev.
-    public static final String PATH_BOULDER_PROBLEM_INFO = "info";
+    public static final String PATH_BOULDER_PROBLEM_INFO = "boulder";
     public static final String PATH_HOLDS = "holds";
 
     // To prevent someone from accidentally instantiating the contract class,
@@ -48,7 +48,7 @@ public final class BoulderContract {
         }
 
         public static String getBoulderProblemIdFromUri(Uri uri) {
-            return uri.getPathSegments().get(1);
+            return uri.getPathSegments().get(0);
         }
 
         public static final String TABLE_NAME = "boulder_problem";
@@ -56,6 +56,7 @@ public final class BoulderContract {
         public static final String COLUMN_NAME = "name";
         public static final String COLUMN_COMMENT = "comment";
         public static final String COLUMN_INPUTBITMAPURI = "input_bitmap_uri";
+        public static final String COLUMN_FINALBITMAPURI = "final_bitmap_uri";
         public static final String COLUMN_GRADE = "grade";
     }
 
