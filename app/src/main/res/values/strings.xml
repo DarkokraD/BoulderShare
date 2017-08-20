@@ -12,7 +12,9 @@
     <string name="grade_label">Grade</string>
     <string name="problem_name">Problem name</string>
 
+    <string name="problem_deleted">The selected boulder problem has been deleted</string>
     <string name="image_saved">Image has been saved and is available in the gallery</string>
+    <string name="problem_being_deleted">Boulder problem is being deleted...</string>
 
     <string-array name="grades_array">
         <item>Unknown</item>
