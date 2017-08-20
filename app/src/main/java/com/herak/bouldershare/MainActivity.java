@@ -51,13 +51,23 @@ public class MainActivity extends AppCompatActivity
 
     String mCurrentPhotoPath;
     private Bitmap mBoulderBitmap;
+
     private FRAGMENT_TYPE nextFragment = null;
+
+    public void setNextFragment(FRAGMENT_TYPE nextFragment) {
+        this.nextFragment = nextFragment;
+    }
 
     private BoulderProblemInfo mBoulderProblemInfo;
 
     public BoulderProblemInfo getmBoulderProblemInfo() {
-        mBoulderProblemInfo.setInputBitmapUri(mBoulderBitmapUri);
+        if(mBoulderProblemInfo.getInputBitmapUri() == null)
+            mBoulderProblemInfo.setInputBitmapUri(mBoulderBitmapUri);
         return mBoulderProblemInfo;
+    }
+
+    public void setmBoulderProblemInfo(BoulderProblemInfo mBoulderProblemInfo) {
+        this.mBoulderProblemInfo = mBoulderProblemInfo;
     }
 
 
@@ -130,6 +140,7 @@ public class MainActivity extends AppCompatActivity
 
                 mBoulderBitmap = Bitmap.createBitmap(mBoulderBitmap, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true); // rotating bitmap
                 nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
+                mBoulderProblemInfo = new BoulderProblemInfo();
             }
             catch (Exception e) {
                 Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
@@ -143,6 +154,7 @@ public class MainActivity extends AppCompatActivity
                 try {
                     mBoulderBitmap = modifyOrientation(selectedImage, imageStream);
                     nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
+                    mBoulderProblemInfo = new BoulderProblemInfo();
                 } catch (IOException e) {
                     e.printStackTrace();
                     Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
@@ -325,7 +337,7 @@ public class MainActivity extends AppCompatActivity
             transaction.replace(R.id.flayoutMainActivity, new BoulderFragment(), BOULDER_FRAGMENT_TAG);
             findViewById(R.id.fabCamera).setVisibility(View.INVISIBLE);
             findViewById(R.id.fabGallery).setVisibility(View.INVISIBLE);
-            mBoulderProblemInfo = new BoulderProblemInfo(); //TODO Move this functionality so that proper data is loaded if loading existing problem
+
         }
 //        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS_FRAGMENT)
 //        {

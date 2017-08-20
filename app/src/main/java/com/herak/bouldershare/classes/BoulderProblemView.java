@@ -3,11 +3,13 @@ package com.herak.bouldershare.classes;
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -22,6 +24,8 @@ import com.herak.bouldershare.data.BoulderContract;
 import com.herak.bouldershare.data.BoulderProvider;
 import com.herak.bouldershare.enums.HoldType;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,9 +79,31 @@ public class BoulderProblemView extends View {
         paint = new Paint();
 
         this.mainActivity = (MainActivity) context;
-        this.mBoulderBitmap = mainActivity.getmBoulderBitmap();
+
         this.mScaleFactor = 0;
         this.mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
+
+        if (mBoulderProblemInfo.getInputBitmapUri() != null){
+            //load bitmap from input bitmap Uri
+            try {
+                this.mBoulderBitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),mBoulderProblemInfo.getInputBitmapUri());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else{
+            this.mBoulderBitmap = mainActivity.getmBoulderBitmap();
+        }
+
+        try {
+            InputStream imageStream = context.getContentResolver().openInputStream(mBoulderProblemInfo.getInputBitmapUri());
+            this.mBoulderBitmap = MainActivity.modifyOrientation(this.mBoulderBitmap, imageStream);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if( !mBoulderProblemInfo.getHolds().isEmpty() ){
+            this.holds = mBoulderProblemInfo.getHolds();
+        }
 //        this.mBoulderProblemInfo.setInputBitmapUri(mainActivity.getmBoulderBitmapUri());
         scaleGestureDetector = new ScaleGestureDetector(context, new MyOnScaleGestureListener(this));
         mGestureDetector = new GestureDetector(context, new GestureListener());
