@@ -60,6 +60,10 @@ public class MainActivity extends AppCompatActivity
 
     private BoulderProblemInfo mBoulderProblemInfo;
 
+    public void setmBoulderBitmap(Bitmap mBoulderBitmap) {
+        this.mBoulderBitmap = mBoulderBitmap;
+    }
+
     public BoulderProblemInfo getmBoulderProblemInfo() {
         if(mBoulderProblemInfo.getInputBitmapUri() == null)
             mBoulderProblemInfo.setInputBitmapUri(mBoulderBitmapUri);

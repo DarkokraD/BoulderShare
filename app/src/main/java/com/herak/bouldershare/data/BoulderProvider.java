@@ -215,6 +215,7 @@ public class BoulderProvider extends ContentProvider{
         final int match = sUriMatcher.match(uri);
         switch (match) {
             case HOLDS:
+            case HOLDS_FROM_BOULDER_PROBLEM:
                 db.beginTransaction();
                 int returnCount = 0;
                 try {
@@ -245,11 +246,15 @@ public class BoulderProvider extends ContentProvider{
         // handle.  If it doesn't match these, throw an UnsupportedOperationException.
         if(null == selection) selection = "1";
         switch (match) {
-            case HOLDS: {
+            case HOLDS:
+            case HOLDS_FROM_BOULDER_PROBLEM:
+            {
                 rowsDeleted = db.delete(BoulderContract.HoldsEntry.TABLE_NAME, selection, selectionArgs);
                 break;
             }
-            case BOULDER_PROBLEM_INFO: {
+            case BOULDER_PROBLEM_INFO:
+            case BOULDER_PROBLEM_INFOS:
+            {
                 rowsDeleted = db.delete(BoulderContract.BoulderProblemInfoEntry.TABLE_NAME, selection, selectionArgs);
                 break;
             }
@@ -271,11 +276,15 @@ public class BoulderProvider extends ContentProvider{
         int rowsUpdated;
 
         switch (match) {
-            case HOLDS: {
+            case HOLDS:
+            case HOLDS_FROM_BOULDER_PROBLEM:
+            {
                 rowsUpdated = db.update(BoulderContract.HoldsEntry.TABLE_NAME, values, selection, selectionArgs);
                 break;
             }
-            case BOULDER_PROBLEM_INFO: {
+            case BOULDER_PROBLEM_INFO:
+            case BOULDER_PROBLEM_INFOS:
+            {
                 rowsUpdated = db.update(BoulderContract.BoulderProblemInfoEntry.TABLE_NAME, values, selection, selectionArgs);
                 break;
             }

@@ -97,11 +97,12 @@ public class BoulderProblemView extends View {
         try {
             InputStream imageStream = context.getContentResolver().openInputStream(mBoulderProblemInfo.getInputBitmapUri());
             this.mBoulderBitmap = MainActivity.modifyOrientation(this.mBoulderBitmap, imageStream);
+            mainActivity.setmBoulderBitmap(this.mBoulderBitmap);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        if( !mBoulderProblemInfo.getHolds().isEmpty() ){
+        if( mBoulderProblemInfo.getHolds() != null && !mBoulderProblemInfo.getHolds().isEmpty() ){
             this.holds = mBoulderProblemInfo.getHolds();
         }
 //        this.mBoulderProblemInfo.setInputBitmapUri(mainActivity.getmBoulderBitmapUri());

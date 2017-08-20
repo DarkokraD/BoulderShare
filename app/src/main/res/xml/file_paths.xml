@@ -3,6 +3,8 @@
     <external-path name="my_images" path="Android/data/com.herak.bouldershare/files/Pictures" />
     <external-path name="BoulderShare Problem" path="BoulderShare/Created Problems/"/>
     <external-path name="BoulderShare Raw" path="BoulderShare/Input Photos/" />
+    <external-path name="BoulderShare Output" path="/external/Pictures/BoulderShare Output/" />
     <external-path name="external" path="." />
     <cache-path name="shared_images" path="images/"/>
+    <external-files-path name="BoulderShare Output" />
 </paths>
