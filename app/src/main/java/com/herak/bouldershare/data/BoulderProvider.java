@@ -16,23 +16,30 @@ import android.net.Uri;
 public class BoulderProvider extends ContentProvider{
 
     static final int BOULDER_PROBLEM_INFO = 100;
+    static final int BOULDER_PROBLEM_INFOS = 101;
     static final int HOLDS = 200;
     static final int HOLDS_FROM_BOULDER_PROBLEM = 201;
 
     private static final SQLiteQueryBuilder sBoulderProblemQueryBuilder;
+    private static final SQLiteQueryBuilder sHoldQueryBuilder;
 
     static{
         sBoulderProblemQueryBuilder = new SQLiteQueryBuilder();
+        sHoldQueryBuilder = new SQLiteQueryBuilder();
 
-//        //This is an inner join which looks like
-//        //weather INNER JOIN location ON weather.location_id = location._id
-//        sWeatherByLocationSettingQueryBuilder.setTables(
-//                WeatherContract.WeatherEntry.TABLE_NAME + " INNER JOIN " +
+        //This is an inner join which looks like
+        //weather INNER JOIN location ON weather.location_id = location._id
+        sBoulderProblemQueryBuilder.setTables(
+                BoulderContract.BoulderProblemInfoEntry.TABLE_NAME
+//                        + " INNER JOIN " +
 //                        WeatherContract.LocationEntry.TABLE_NAME +
 //                        " ON " + WeatherContract.WeatherEntry.TABLE_NAME +
 //                        "." + WeatherContract.WeatherEntry.COLUMN_LOC_KEY +
 //                        " = " + WeatherContract.LocationEntry.TABLE_NAME +
-//                        "." + WeatherContract.LocationEntry._ID);
+//                        "." + WeatherContract.LocationEntry._ID
+        );
+        sHoldQueryBuilder.setTables(
+                BoulderContract.HoldsEntry.TABLE_NAME);
     }
 
     private BoulderDbHelper mOpenHelper;
@@ -49,9 +56,10 @@ public class BoulderProvider extends ContentProvider{
         final String authority = BoulderContract.CONTENT_AUTHORITY;
 
         // For each type of URI you want to add, create a corresponding code.
-        matcher.addURI(authority, BoulderContract.PATH_BOULDER_PROBLEM_INFO, BOULDER_PROBLEM_INFO);
+        matcher.addURI(authority, BoulderContract.PATH_BOULDER_PROBLEM_INFO + "/#", BOULDER_PROBLEM_INFO);
         matcher.addURI(authority, BoulderContract.PATH_HOLDS, HOLDS);
         matcher.addURI(authority, BoulderContract.PATH_HOLDS + "/#", HOLDS_FROM_BOULDER_PROBLEM);
+        matcher.addURI(authority, BoulderContract.PATH_BOULDER_PROBLEM_INFO, BOULDER_PROBLEM_INFOS);
 
 
         return matcher;
@@ -73,6 +81,8 @@ public class BoulderProvider extends ContentProvider{
             // Student: Uncomment and fill out these two cases
             case BOULDER_PROBLEM_INFO:
                 return BoulderContract.BoulderProblemInfoEntry.CONTENT_ITEM_TYPE;
+            case BOULDER_PROBLEM_INFOS:
+                return BoulderContract.BoulderProblemInfoEntry.CONTENT_TYPE;
             case HOLDS:
                 return BoulderContract.HoldsEntry.CONTENT_ITEM_TYPE;
             case HOLDS_FROM_BOULDER_PROBLEM:
@@ -88,7 +98,7 @@ public class BoulderProvider extends ContentProvider{
                     "." + BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID + " = ?";
 
     private static final String sBoulderProblemWithIdSelection =
-            BoulderContract.HoldsEntry.TABLE_NAME +
+            BoulderContract.BoulderProblemInfoEntry.TABLE_NAME +
                     "." + BoulderContract.BoulderProblemInfoEntry._ID + " = ?";
 
 
@@ -103,6 +113,11 @@ public class BoulderProvider extends ContentProvider{
             case BOULDER_PROBLEM_INFO:
             {
                 retCursor = getBoulderProblemInfo(uri, projection, sortOrder);
+                break;
+            }
+            case BOULDER_PROBLEM_INFOS:
+            {
+                retCursor = getBoulderProblemInfos(uri, projection, sortOrder);
                 break;
             }
             // "weather/*"
@@ -124,7 +139,7 @@ public class BoulderProvider extends ContentProvider{
 
     private Cursor getHoldsWithBoulderProblemId(Uri uri, String[] projection, String sortOrder) {
         String id = BoulderContract.HoldsEntry.getBoulderProblemIdFromUri(uri);
-        return sBoulderProblemQueryBuilder.query(mOpenHelper.getReadableDatabase(),
+        return sHoldQueryBuilder.query(mOpenHelper.getReadableDatabase(),
                 projection,
                 sHoldsWithBoulderProblemIdSelection,
                 new String[]{id},
@@ -147,6 +162,19 @@ public class BoulderProvider extends ContentProvider{
         );
     }
 
+    private Cursor getBoulderProblemInfos(Uri uri, String[] projection, String sortOrder) {
+        String id = BoulderContract.BoulderProblemInfoEntry.getBoulderProblemIdFromUri(uri);
+
+        return sBoulderProblemQueryBuilder.query(mOpenHelper.getReadableDatabase(),
+                projection,
+                null,
+                null,
+                null,
+                null,
+                sortOrder
+        );
+    }
+
     @Override
     public Uri insert(Uri uri, ContentValues values) {
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
@@ -163,7 +191,9 @@ public class BoulderProvider extends ContentProvider{
                     throw new android.database.SQLException("Failed to insert row into " + uri);
                 break;
             }
-            case BOULDER_PROBLEM_INFO: {
+            case BOULDER_PROBLEM_INFO:
+            case BOULDER_PROBLEM_INFOS:
+                {
 
                 long _id = db.insert(BoulderContract.BoulderProblemInfoEntry.TABLE_NAME, null, values);
                 if ( _id > 0 )
