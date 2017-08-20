@@ -106,11 +106,11 @@ public class BoulderFragment extends Fragment {
 
             final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
 
-            Canvas canvas = new Canvas(resultBitmap);
-            canvas = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).drawOnCustomCanvas(canvas);
-
-
             BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
+            Canvas canvas = new Canvas(resultBitmap);
+            canvas = bpView.drawOnCustomCanvas(canvas);
+
+
             final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
 
 

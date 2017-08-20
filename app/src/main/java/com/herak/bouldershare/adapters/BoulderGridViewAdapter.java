@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -19,6 +20,8 @@ import android.widget.TextView;
 
 import com.herak.bouldershare.R;
 import com.herak.bouldershare.data.BoulderContract;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
 
 import java.io.IOException;
 
@@ -42,21 +45,20 @@ public class BoulderGridViewAdapter extends CursorAdapter {
         final int THUMB_SIZE = 300;
         //TODO figure out how this works on different screensizes and make it responsive
         TextView boulderImageViewText = (TextView) view.findViewById(R.id.boulderImageViewText);
-        ImageView boulderImageView = (ImageView) view.findViewById(R.id.boulderImageView);
+        final ImageView boulderImageView = (ImageView) view.findViewById(R.id.boulderImageView);
         if(cursor.getString( cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI) ) != null) {
 //            boulderImageView.setImageURI(Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI))));
             Uri finalBitmapUri = Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI)));
-            try {
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),finalBitmapUri);
 
-                boulderImageView.setImageBitmap(ThumbnailUtils.extractThumbnail(bitmap, THUMB_SIZE*3, THUMB_SIZE*4));
-                boulderImageView.layout(0,0,THUMB_SIZE*3,THUMB_SIZE*4);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-//            File file = new File(finalBitmapUri.getPath());
-//            System.out.println("File je: " + file + "######################");
-//            Glide.with(context).load("file://"+file).into(boulderImageView);
+//
+            Picasso.with(context)
+                    .load(finalBitmapUri)
+                    .resize(THUMB_SIZE*3,THUMB_SIZE*4)
+                    .centerCrop()
+                    .into(boulderImageView);
+
+
+//
         }
 
         Typeface roboto = Typeface.createFromAsset(context.getResources().getAssets(), "font/Roboto-Medium.ttf");
