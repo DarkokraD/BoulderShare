@@ -2,6 +2,7 @@ package com.herak.bouldershare.fragments;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -9,13 +10,20 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.TextView;
 
+import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
 import com.herak.bouldershare.adapters.BoulderGridViewAdapter;
+import com.herak.bouldershare.classes.BoulderProblemInfo;
+import com.herak.bouldershare.classes.Hold;
 import com.herak.bouldershare.data.BoulderContract;
+import com.herak.bouldershare.enums.HoldType;
 
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -28,6 +36,7 @@ public class MainFragment extends Fragment {
 
     BoulderGridViewAdapter mBoulderGridViewAdapter;
     Context mContext = getContext();
+    MainActivity mainActivity = (MainActivity) getActivity();
     GridView mBoulderGrid;
 
 
@@ -54,6 +63,41 @@ public class MainFragment extends Fragment {
 //                "- Move the hold by pressing inside the hold for 200ms and moving the finger around\n" +
 //                "- Click the information icon and fill in the information in the dialog to add some information on the boulder problem\n" +
 //                "- Once you're done share the image with your climbing buddies by clicking the Share icon");
+        mBoulderGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                Cursor cursor = ((BoulderGridViewAdapter) parent.getAdapter()).getCursor();
+                cursor.moveToPosition(position);
+                BoulderProblemInfo boulder = new BoulderProblemInfo();
+                boulder.setId(cursor.getLong(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID)));
+                boulder.setAuthor(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR)));
+                boulder.setName(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME)));
+                boulder.setComment(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT)));
+                boulder.setGrade(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE)));
+                boulder.setInputBitmapUri(Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI))));
+                boulder.setFinalBitmapUri(Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI))));
+
+                Cursor holdsCursor = getContext().getContentResolver().query(BoulderContract.HoldsEntry.buildHoldsOfBoulderProblem(boulder.getId()), null, null, null, null);
+                List<Hold> holds = new ArrayList<Hold>();
+                while(holdsCursor.moveToNext()){
+                    Hold hold = new Hold(
+                            holdsCursor.getFloat(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_COORD_X)),
+                            holdsCursor.getFloat(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_COORD_Y))
+                    );
+                    hold.setCircleRadius(holdsCursor.getInt(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_CIRCLE_RADIUS)));
+                    hold.setType(HoldType.valueOf(holdsCursor.getString(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_HOLD_TYPE))));
+                    hold.setId(holdsCursor.getLong(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry._ID)));
+                    hold.setBoulderId(holdsCursor.getLong(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID)));
+                    holds.add(hold);
+                }
+                boulder.setHolds(holds);
+
+                ((MainActivity) getActivity()).setmBoulderProblemInfo(boulder);
+                ((MainActivity) getActivity()).changeFragment(MainActivity.FRAGMENT_TYPE.BOULDER_FRAGMENT);
+
+            }
+        });
 
         return view;
     }
@@ -68,13 +112,6 @@ public class MainFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-//        String[] projection = {
-//                BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR,
-//                BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT,
-//                BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE,
-//                BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI,
-//                BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME,
-//        };
 
         mContext = getContext();
         Cursor boulderCursor = mContext.getContentResolver().query(
@@ -86,12 +123,6 @@ public class MainFragment extends Fragment {
 
         mBoulderGridViewAdapter = new BoulderGridViewAdapter(mContext, boulderCursor);
         mBoulderGrid.setAdapter(mBoulderGridViewAdapter);
-
-        long id = -1;
-        if(boulderCursor.moveToNext()){
-            id = boulderCursor.getLong(boulderCursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID));
-        }
-//        boulderCursor.close();
 
         getActivity().findViewById(R.id.fabCamera).setVisibility(View.VISIBLE);
         getActivity().findViewById(R.id.fabGallery).setVisibility(View.VISIBLE);

@@ -7,6 +7,24 @@ import com.herak.bouldershare.enums.HoldType;
  */
 
 public class Hold {
+    long id, boulderId;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public long getBoulderId() {
+        return boulderId;
+    }
+
+    public void setBoulderId(long boulderId) {
+        this.boulderId = boulderId;
+    }
+
     float x, y;
 
     public float getX() {
