@@ -10,9 +10,11 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
@@ -39,7 +41,6 @@ public class MainFragment extends Fragment {
     MainActivity mainActivity = (MainActivity) getActivity();
     GridView mBoulderGrid;
 
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -63,6 +64,7 @@ public class MainFragment extends Fragment {
 //                "- Move the hold by pressing inside the hold for 200ms and moving the finger around\n" +
 //                "- Click the information icon and fill in the information in the dialog to add some information on the boulder problem\n" +
 //                "- Once you're done share the image with your climbing buddies by clicking the Share icon");
+
         mBoulderGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -99,6 +101,41 @@ public class MainFragment extends Fragment {
             }
         });
 
+        mBoulderGrid.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                BoulderGridViewAdapter adapter = (BoulderGridViewAdapter) parent.getAdapter();
+                Cursor cursor = adapter.getCursor();
+                cursor.moveToPosition(position);
+                long boulderId = cursor.getLong(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID));
+                if(boulderId > 0){
+                    //Delete boulder problem and all related holds
+                    getContext().getContentResolver().delete(BoulderContract.HoldsEntry.CONTENT_URI,
+                            BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID + " = ?",
+                            new String[]{Long.toString(boulderId)});
+
+                    getContext().getContentResolver().delete(BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
+                            BoulderContract.BoulderProblemInfoEntry._ID + " = ?",
+                            new String[]{Long.toString(boulderId)});
+
+                    cursor = mContext.getContentResolver().query(
+                            BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
+                            null,
+                            null,
+                            null,
+                            BoulderContract.BoulderProblemInfoEntry._ID + " DESC");;
+
+                    adapter.changeCursor(cursor);
+                    adapter.notifyDataSetChanged();
+
+                    Toast.makeText(getContext(), R.string.problem_deleted, Toast.LENGTH_LONG).show();
+                    return true;
+                }
+
+                return false;
+            }
+        });
+
         return view;
     }
 
@@ -119,7 +156,7 @@ public class MainFragment extends Fragment {
                 null,
                 null,
                 null,
-                null);
+                BoulderContract.BoulderProblemInfoEntry._ID + " DESC");
 
         mBoulderGridViewAdapter = new BoulderGridViewAdapter(mContext, boulderCursor);
         mBoulderGrid.setAdapter(mBoulderGridViewAdapter);

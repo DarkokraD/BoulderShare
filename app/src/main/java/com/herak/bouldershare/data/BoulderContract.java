@@ -86,9 +86,10 @@ public final class BoulderContract {
 
         public static String getBoulderProblemIdFromUri(Uri uri) {
             List<String> queryParameters = uri.getQueryParameters(COLUMN_BOULDER_PROBLEM_ID);
-            System.out.println("###### params size " + queryParameters.size() + " - " + queryParameters.get(0));
+            if(queryParameters.size() > 0) return queryParameters.get(0);
+            else return uri.getLastPathSegment();
 
-            return queryParameters.get(0);
+
         }
 
         public static final String TABLE_NAME = "holds";

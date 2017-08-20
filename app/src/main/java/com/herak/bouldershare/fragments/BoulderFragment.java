@@ -31,13 +31,14 @@ import com.herak.bouldershare.classes.BoulderProblemInfo;
 import com.herak.bouldershare.classes.BoulderProblemView;
 import com.herak.bouldershare.classes.Hold;
 import com.herak.bouldershare.data.BoulderContract;
-import com.herak.bouldershare.data.BoulderProvider;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import static android.os.FileObserver.DELETE;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -128,14 +129,17 @@ public class BoulderFragment extends Fragment {
                     File pictureFile;
                     if(boulderProblemInfo.getFinalBitmapUri() != null){
                         pictureFile = new File(boulderProblemInfo.getFinalBitmapUri().getPath());
-                    }else {
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                        String name = "boulder_" + timeStamp + ".jpg";
-                        pictureFile = new File(directory, name);
+                        if(pictureFile.exists())
+                            pictureFile.delete();
                     }
 
+                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                    String name = "boulder_" + timeStamp + ".jpg";
+                    pictureFile = new File(directory, name);
+
                     try {
-                        pictureFile.createNewFile();
+                        if(!pictureFile.exists())
+                            pictureFile.createNewFile();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -178,7 +182,7 @@ public class BoulderFragment extends Fragment {
                     if(o != null){
                         Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
                     }
-                    addBoulderProblem(boulderProblemInfo);
+                    addOrUpdateBoulderProblem(boulderProblemInfo);
                     super.onPostExecute(o);
                 }
             };
@@ -215,7 +219,7 @@ public class BoulderFragment extends Fragment {
         return super.onOptionsItemSelected(item);
     }
 
-    public long addBoulderProblem(BoulderProblemInfo info){
+    public long addOrUpdateBoulderProblem(BoulderProblemInfo info){
 //        BoulderProvider boulderProvider = new BoulderProvider();
         long boulderProblemId;
         mContext = getContext();
@@ -229,37 +233,51 @@ public class BoulderFragment extends Fragment {
                     null);
         }
 
+        ContentValues values = new ContentValues();
+
+        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR, info.getAuthor());
+        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT, info.getComment());
+        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE, info.getGrade());
+        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME, info.getName());
+        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI, info.getInputBitmapUri().toString());
+        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI, info.getFinalBitmapUri().toString());
+
         if (boulderCursor != null && boulderCursor.moveToFirst()) {
-            int locationIdIndex = boulderCursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID);
-            boulderProblemId = boulderCursor.getLong(locationIdIndex);
+            //update existing
+            int boulderIdIndex = boulderCursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID);
+            boulderProblemId = boulderCursor.getLong(boulderIdIndex);
+            //Update BoulderProblemInfo
+            mContext.getContentResolver().update(
+                    BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
+                    values,
+                    BoulderContract.BoulderProblemInfoEntry._ID + " = ?",
+                    new String[]{Long.toString(info.getId())});
+            //DELETE existing holds for this boulderProblem
+            mContext.getContentResolver().delete(BoulderContract.HoldsEntry.CONTENT_URI,
+                    BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID + " = ?",
+                    new String[]{Long.toString(info.getId())});
+
         } else {
-
-            ContentValues values = new ContentValues();
-
-            values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR, info.getAuthor());
-            values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT, info.getComment());
-            values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE, info.getGrade());
-            values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME, info.getName());
-            values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI, info.getInputBitmapUri().toString());
-            values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI, info.getFinalBitmapUri().toString());
-
+            //insert new boulderProblem
             Uri returnUri = mContext.getContentResolver().insert(BoulderContract.BoulderProblemInfoEntry.CONTENT_URI, values);
             boulderProblemId = Long.parseLong(BoulderContract.HoldsEntry.getBoulderProblemIdFromUri(returnUri));
             info.setId(boulderProblemId);
-
-            ContentValues[] valuesArray = new ContentValues[info.getHolds().size()];
-            for(Hold hold:info.getHolds()){
-                ContentValues holdValues = new ContentValues();
-                holdValues.put(BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID, info.getId());
-                holdValues.put(BoulderContract.HoldsEntry.COLUMN_CIRCLE_RADIUS, hold.getCircleRadius());
-                holdValues.put(BoulderContract.HoldsEntry.COLUMN_COORD_X, hold.getX());
-                holdValues.put(BoulderContract.HoldsEntry.COLUMN_COORD_Y, hold.getY());
-                holdValues.put(BoulderContract.HoldsEntry.COLUMN_HOLD_TYPE, hold.getType().toString());
-                valuesArray[info.getHolds().indexOf(hold)] = holdValues;
-            }
-            int rowsInserted = mContext.getContentResolver().bulkInsert(BoulderContract.HoldsEntry.CONTENT_URI, valuesArray);
-
         }
+
+        ContentValues[] valuesArray = new ContentValues[info.getHolds().size()];
+        for(Hold hold:info.getHolds()){
+            ContentValues holdValues = new ContentValues();
+            holdValues.put(BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID, info.getId());
+            holdValues.put(BoulderContract.HoldsEntry.COLUMN_CIRCLE_RADIUS, hold.getCircleRadius());
+            holdValues.put(BoulderContract.HoldsEntry.COLUMN_COORD_X, hold.getX());
+            holdValues.put(BoulderContract.HoldsEntry.COLUMN_COORD_Y, hold.getY());
+            holdValues.put(BoulderContract.HoldsEntry.COLUMN_HOLD_TYPE, hold.getType().toString());
+            valuesArray[info.getHolds().indexOf(hold)] = holdValues;
+        }
+
+        //Bulk insert holds for boulderProblem
+        int rowsInserted = mContext.getContentResolver().bulkInsert(BoulderContract.HoldsEntry.CONTENT_URI, valuesArray);
+
         return boulderProblemId;
     }
 }
