@@ -57,8 +57,8 @@ public class BoulderProvider extends ContentProvider{
 
         // For each type of URI you want to add, create a corresponding code.
         matcher.addURI(authority, BoulderContract.PATH_BOULDER_PROBLEM_INFO + "/#", BOULDER_PROBLEM_INFO);
-        matcher.addURI(authority, BoulderContract.PATH_HOLDS, HOLDS);
-        matcher.addURI(authority, BoulderContract.PATH_HOLDS + "/#", HOLDS_FROM_BOULDER_PROBLEM);
+        matcher.addURI(authority, BoulderContract.PATH_HOLDS + "/#", HOLDS);
+        matcher.addURI(authority, BoulderContract.PATH_HOLDS, HOLDS_FROM_BOULDER_PROBLEM);
         matcher.addURI(authority, BoulderContract.PATH_BOULDER_PROBLEM_INFO, BOULDER_PROBLEM_INFOS);
 
 

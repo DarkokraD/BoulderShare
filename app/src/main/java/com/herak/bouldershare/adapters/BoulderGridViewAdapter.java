@@ -1,16 +1,13 @@
 package com.herak.bouldershare.adapters;
 
-import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.provider.MediaStore;
-import android.text.Layout;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -20,16 +17,10 @@ import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.bumptech.glide.Glide;
 import com.herak.bouldershare.R;
 import com.herak.bouldershare.data.BoulderContract;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
-import static com.herak.bouldershare.R.id.boulderImageViewText;
 
 /**
  * Created by darko on 19.8.2017..
@@ -49,6 +40,7 @@ public class BoulderGridViewAdapter extends CursorAdapter {
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
         final int THUMB_SIZE = 300;
+        //TODO figure out how this works on different screensizes and make it responsive
         TextView boulderImageViewText = (TextView) view.findViewById(R.id.boulderImageViewText);
         ImageView boulderImageView = (ImageView) view.findViewById(R.id.boulderImageView);
         if(cursor.getString( cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI) ) != null) {
@@ -109,4 +101,6 @@ public class BoulderGridViewAdapter extends CursorAdapter {
         }
         return title;
     }
+
+
 }
