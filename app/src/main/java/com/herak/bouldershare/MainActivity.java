@@ -56,8 +56,13 @@ public class MainActivity extends AppCompatActivity
     private BoulderProblemInfo mBoulderProblemInfo;
 
     public BoulderProblemInfo getmBoulderProblemInfo() {
+        mBoulderProblemInfo.setInputBitmapUri(mBoulderBitmapUri);
         return mBoulderProblemInfo;
     }
+
+
+
+    private Uri mBoulderBitmapUri;
 
     public Bitmap getmBoulderBitmap() {
         return mBoulderBitmap;
@@ -68,6 +73,7 @@ public class MainActivity extends AppCompatActivity
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             File file = new File(mCurrentPhotoPath);
             Uri uri = Uri.fromFile(file);
+            mBoulderBitmapUri = uri;
             mBoulderBitmap = BitmapFactory.decodeFile(uri.getPath());            //MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
             final Context context = this;
 
@@ -131,6 +137,7 @@ public class MainActivity extends AppCompatActivity
         }else if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK) {
             try {
                 final Uri imageUri = data.getData();
+                mBoulderBitmapUri = imageUri;
                 InputStream imageStream = getContentResolver().openInputStream(imageUri);
                 final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
                 try {
@@ -318,7 +325,7 @@ public class MainActivity extends AppCompatActivity
             transaction.replace(R.id.flayoutMainActivity, new BoulderFragment(), BOULDER_FRAGMENT_TAG);
             findViewById(R.id.fabCamera).setVisibility(View.INVISIBLE);
             findViewById(R.id.fabGallery).setVisibility(View.INVISIBLE);
-            mBoulderProblemInfo = new BoulderProblemInfo();
+            mBoulderProblemInfo = new BoulderProblemInfo(); //TODO Move this functionality so that proper data is loaded if loading existing problem
         }
 //        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS_FRAGMENT)
 //        {
@@ -383,5 +390,13 @@ public class MainActivity extends AppCompatActivity
                 // result of the request.
             }
         }
+    }
+
+    public Uri getmBoulderBitmapUri() {
+        return mBoulderBitmapUri;
+    }
+
+    public void setmBoulderBitmapUri(Uri mBoulderBitmapUri) {
+        this.mBoulderBitmapUri = mBoulderBitmapUri;
     }
 }

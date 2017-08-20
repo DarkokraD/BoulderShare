@@ -6,8 +6,37 @@ import com.herak.bouldershare.enums.HoldType;
  * Created by darko on 23.4.2017..
  */
 
-class Hold {
+public class Hold {
     float x, y;
+
+    public float getX() {
+        return x;
+    }
+
+    public void setX(float x) {
+        this.x = x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public void setY(float y) {
+        this.y = y;
+    }
+
+    public HoldType getType() {
+        return type;
+    }
+
+    public int getCircleRadius() {
+        return circleRadius;
+    }
+
+    public void setCircleRadius(int circleRadius) {
+        this.circleRadius = circleRadius;
+    }
+
     HoldType type;
     int circleRadius;
 

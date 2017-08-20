@@ -105,7 +105,7 @@ public class InfoFragment extends DialogFragment {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
                         Dialog mDialog = (Dialog) dialog;
-                        mBoulderProblemInfo = new BoulderProblemInfo();
+                        //mBoulderProblemInfo = new BoulderProblemInfo();
 
                         EditText etSettingsUsername = (EditText) mDialog.findViewById(R.id.etInfoAuthor);
                         username = etSettingsUsername.getText().toString();
