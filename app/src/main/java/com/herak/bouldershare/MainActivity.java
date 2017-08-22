@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import static android.R.attr.data;
 import static android.R.attr.rotation;
 
 public class MainActivity extends AppCompatActivity
@@ -52,7 +53,10 @@ public class MainActivity extends AppCompatActivity
     String mCurrentPhotoPath;
     private Bitmap mBoulderBitmap;
 
+    private boolean hasUnsavedChanges = false;
+
     private FRAGMENT_TYPE nextFragment = null;
+    private Menu menu;
 
     public void setNextFragment(FRAGMENT_TYPE nextFragment) {
         this.nextFragment = nextFragment;
@@ -86,11 +90,9 @@ public class MainActivity extends AppCompatActivity
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             File file = new File(mCurrentPhotoPath);
-            Uri uri = Uri.fromFile(file);
-            mBoulderBitmapUri = uri;
+            final Uri uri = Uri.fromFile(file);
             mBoulderBitmap = BitmapFactory.decodeFile(uri.getPath());            //MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
             final Context context = this;
-
 
             checkAndGetWritePermission();
 
@@ -112,6 +114,15 @@ public class MainActivity extends AppCompatActivity
                     }
                     try {
                         FileOutputStream out = new FileOutputStream(pictureFile);
+                        ExifInterface exif = new ExifInterface(pictureFile.getAbsolutePath());
+                        int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
+                        int rotationInDegrees = exifToDegrees(orientation);
+                        Matrix matrix = new Matrix();
+                        if (rotation != 0f) {
+                            matrix.preRotate(rotationInDegrees);
+                        }
+
+                        mBoulderBitmap = Bitmap.createBitmap(mBoulderBitmap, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true);
                         mBoulderBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
                         out.close();
                     } catch (Exception e) {
@@ -127,28 +138,26 @@ public class MainActivity extends AppCompatActivity
                                     Log.i("ExternalStorage", "-> uri=" + uri);
                                 }
                             });
+
+                    mBoulderProblemInfo = new BoulderProblemInfo();
+                    mBoulderProblemInfo.setInputBitmapUri(Uri.fromFile(pictureFile));
+                    mBoulderBitmapUri = Uri.fromFile(pictureFile);
+
                     return null;
+                }
+
+                @Override
+                protected void onPostExecute(Object o) {
+                    super.onPostExecute(o);
+                    MainActivity mainActivity = (MainActivity) context;
+
+                    mainActivity.changeFragment(FRAGMENT_TYPE.BOULDER_FRAGMENT);
                 }
             };
 
             fileTask.execute();
 
-            try {
-                ExifInterface exif = new ExifInterface(uri.getPath());
-                int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                int rotationInDegrees = exifToDegrees(orientation);
-                Matrix matrix = new Matrix();
-                if (rotation != 0f) {
-                    matrix.preRotate(rotationInDegrees);
-                }
 
-                mBoulderBitmap = Bitmap.createBitmap(mBoulderBitmap, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true); // rotating bitmap
-                nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
-                mBoulderProblemInfo = new BoulderProblemInfo();
-            }
-            catch (Exception e) {
-                Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
-            }
         }else if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK) {
             try {
                 final Uri imageUri = data.getData();
@@ -309,6 +318,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
+        this.menu = menu;
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
@@ -348,6 +358,8 @@ public class MainActivity extends AppCompatActivity
 //
 //        }
 
+        //changes cannot exist once the fragment is loaded since all would be discarded if another was loaded anyway
+        hasUnsavedChanges = false;
 
         transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
         transaction.addToBackStack(null);
@@ -415,4 +427,30 @@ public class MainActivity extends AppCompatActivity
     public void setmBoulderBitmapUri(Uri mBoulderBitmapUri) {
         this.mBoulderBitmapUri = mBoulderBitmapUri;
     }
+
+    public boolean isHasUnsavedChanges() {
+        return hasUnsavedChanges;
+    }
+
+    public void setHasUnsavedChanges(boolean hasUnsavedChanges) {
+        this.hasUnsavedChanges = hasUnsavedChanges;
+    }
+
+    public Menu getMenu() {
+        return menu;
+    }
+
+    public void setMenu(Menu menu) {
+        this.menu = menu;
+    }
+
+    public void setSaveIconVisibility(boolean isVisible){
+        menu.findItem(R.id.action_save).setVisible(isVisible);
+    }
+
+    public void setShareIconVisibility(boolean isVisible){
+        menu.findItem(R.id.action_share).setVisible(isVisible);
+    }
+
+
 }
