@@ -142,8 +142,9 @@ public class MainFragment extends Fragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        menu.findItem(R.id.action_share).setVisible(false);
         menu.findItem(R.id.action_info).setVisible(false);
+        menu.findItem(R.id.action_save).setVisible(false);
+        menu.findItem(R.id.action_share).setVisible(false);
     }
 
     @Override

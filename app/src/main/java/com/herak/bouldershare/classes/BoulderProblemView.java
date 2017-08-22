@@ -92,12 +92,14 @@ public class BoulderProblemView extends View {
             }
         }else{
             this.mBoulderBitmap = mainActivity.getmBoulderBitmap();
+            this.mBoulderProblemInfo.setInputBitmapUri(mainActivity.getmBoulderBitmapUri());
         }
 
         try {
-            InputStream imageStream = context.getContentResolver().openInputStream(mBoulderProblemInfo.getInputBitmapUri());
-            this.mBoulderBitmap = MainActivity.modifyOrientation(this.mBoulderBitmap, imageStream);
-            mainActivity.setmBoulderBitmap(this.mBoulderBitmap);
+                InputStream imageStream = context.getContentResolver().openInputStream(mBoulderProblemInfo.getInputBitmapUri());
+                this.mBoulderBitmap = MainActivity.modifyOrientation(this.mBoulderBitmap, imageStream);
+                mainActivity.setmBoulderBitmap(this.mBoulderBitmap);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -234,10 +236,13 @@ public class BoulderProblemView extends View {
         mGestureDetector.onTouchEvent(event);
 
 
+
+
         if(event.getPointerCount() == 1) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     actionDownTimestamp = System.currentTimeMillis();
+                    unsavedChangesDetected();
                     break;
                 case MotionEvent.ACTION_MOVE:
                     Hold currentPosition = new Hold(event.getX(), event.getY());
@@ -251,6 +256,7 @@ public class BoulderProblemView extends View {
                         moveInitiated = true;
                         invalidate();
                     }
+                    unsavedChangesDetected();
                     break;
                 case MotionEvent.ACTION_UP:
 //                    if(actionDownTimestamp > lastScale & !moveInitiated) {
@@ -280,6 +286,7 @@ public class BoulderProblemView extends View {
 //                    }
                     moveInitiated = false;
                     holdBeingMoved = null;
+                    unsavedChangesDetected();
                     break;
             }
         }
@@ -339,6 +346,7 @@ public class BoulderProblemView extends View {
 
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
+            unsavedChangesDetected();
             Hold hold = new Hold(e.getX(), e.getY());
             hold.type = currentHoldType;
             hold.circleRadius = circleRadius;
@@ -359,6 +367,7 @@ public class BoulderProblemView extends View {
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
+            unsavedChangesDetected();
             Hold hold = new Hold(e.getX(), e.getY());
             hold.type = currentHoldType;
             hold.circleRadius = circleRadius;
@@ -400,6 +409,7 @@ public class BoulderProblemView extends View {
 
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
+            unsavedChangesDetected();
             float focusX = detector.getFocusX();
             float focusY = detector.getFocusY();
 
@@ -427,5 +437,10 @@ public class BoulderProblemView extends View {
         public void onScaleEnd(ScaleGestureDetector detector) {
             scaleOngoing = false;
         }
+    }
+
+    private void unsavedChangesDetected(){
+        mainActivity.setHasUnsavedChanges(true);
+        mainActivity.setSaveIconVisibility(true);
     }
 }
