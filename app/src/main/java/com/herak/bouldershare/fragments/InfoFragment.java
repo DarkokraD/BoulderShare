@@ -66,7 +66,7 @@ public class InfoFragment extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Get the layout inflater
         LayoutInflater inflater = getActivity().getLayoutInflater();
-        MainActivity mainActivity = (MainActivity) getActivity();
+        final MainActivity mainActivity = (MainActivity) getActivity();
         View view = inflater.inflate(R.layout.fragment_info, null);
         settings = mainActivity.getSharedPreferences(MainActivity.PREFS_NAME, 0);
         settingsEditor = settings.edit();
@@ -120,6 +120,8 @@ public class InfoFragment extends DialogFragment {
 
                         mBoulderProblemInfo.setGrade(gradesArray.get(gradePicker.getValue()));
 
+                        mainActivity.setHasUnsavedChanges(true);
+                        mainActivity.setSaveIconVisibility(true);
                         onSaveInfo(mBoulderProblemInfo);
                         dialog.dismiss();
 

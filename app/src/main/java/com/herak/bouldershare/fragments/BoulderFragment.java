@@ -48,6 +48,7 @@ public class BoulderFragment extends Fragment {
     Bitmap mBoulderBitmap;
     Context mContext = getContext();
 
+
     public BoulderFragment() {
     }
 
@@ -81,8 +82,9 @@ public class BoulderFragment extends Fragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        menu.findItem(R.id.action_share).setVisible(true);
         menu.findItem(R.id.action_info).setVisible(true);
+        //menu.findItem(R.id.action_save).setVisible(true);
+        menu.findItem(R.id.action_share).setVisible(true);
     }
 
 
@@ -100,94 +102,128 @@ public class BoulderFragment extends Fragment {
             DialogFragment dialog = new InfoFragment();
             dialog.show(mainActivity.getSupportFragmentManager(), "Settings Fragment");
 
-        }else if (id == R.id.action_share) {
+        }else if (id == R.id.action_save) {
+           /*
+            * Saving logic
+            */
+            saveImageFile(mainActivity);
 
-            mainActivity.checkAndGetWritePermission();
+            return true;
+        }
+        /*
+         * Sharing logic
+          * */
+        else if (id == R.id.action_share) {
 
-            final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
+            if(!mainActivity.isHasUnsavedChanges()){
+                //if no unsaved changes exist just share the latest finalBitmapUri
+                BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
+                final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
 
-            BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
-            Canvas canvas = new Canvas(resultBitmap);
-            canvas = bpView.drawOnCustomCanvas(canvas);
+                Uri contentUri = boulderProblemInfo.getFinalBitmapUri();
+
+                if (contentUri != null) {
+                    Intent shareIntent = new Intent();
+                    shareIntent.setAction(Intent.ACTION_SEND);
+                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
+                    shareIntent.setDataAndType(contentUri, getContext().getContentResolver().getType(contentUri));
+                    shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+                    startActivity(Intent.createChooser(shareIntent, "Choose an app"));
+                }
+
+                return true;
+
+            }else {
+                //if there are unsaved changes, store and changes, then initiate sharing
+
+                mainActivity.checkAndGetWritePermission();
+
+                final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
+
+                BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
+                Canvas canvas = new Canvas(resultBitmap);
+                canvas = bpView.drawOnCustomCanvas(canvas);
 
 
-            final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
+                final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
 
 
-            final Context context = mainActivity;
-            //mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
+                final Context context = mainActivity;
+                //mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
 
-            AsyncTask fileTask = new AsyncTask() {
-                @Override
-                protected Object doInBackground(Object[] objects) {
-                    File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
-                    Object result = null;
+                AsyncTask fileTask = new AsyncTask() {
+                    @Override
+                    protected Object doInBackground(Object[] objects) {
+                        Object result = null;
+                        File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
 
-                    if (!directory.exists()) {
-                        directory.mkdirs();
-                    }
-                    File pictureFile;
-                    if(boulderProblemInfo.getFinalBitmapUri() != null){
-                        pictureFile = new File(boulderProblemInfo.getFinalBitmapUri().getPath());
-                        if(pictureFile.exists())
-                            pictureFile.delete();
-                    }
+                        if (!directory.exists()) {
+                            directory.mkdirs();
+                        }
+                        File pictureFile;
+                        if (boulderProblemInfo.getFinalBitmapUri() != null) {
+                            pictureFile = new File(boulderProblemInfo.getFinalBitmapUri().getPath());
+                            if (pictureFile.exists())
+                                pictureFile.delete();
+                        }
 
-                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                    String name = "boulder_" + timeStamp + ".jpg";
-                    pictureFile = new File(directory, name);
+                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                        String name = "boulder_" + timeStamp + ".jpg";
+                        pictureFile = new File(directory, name);
 
-                    try {
-                        if(!pictureFile.exists())
-                            pictureFile.createNewFile();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        FileOutputStream out = new FileOutputStream(pictureFile);
-                        resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-                        out.close();
+                        try {
+                            if (!pictureFile.exists())
+                                pictureFile.createNewFile();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            FileOutputStream out = new FileOutputStream(pictureFile);
+                            resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                            out.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
                         result = "Image saved";
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                        // Tell the media scanner about the new file so that it is
+                        // immediately available to the user.
+                        MediaScannerConnection.scanFile(mainActivity, new String[]{pictureFile.toString()}, null,
+                                new MediaScannerConnection.OnScanCompletedListener() {
+                                    public void onScanCompleted(String path, Uri uri) {
+                                        Log.i("ExternalStorage", "Scanned " + path + ":");
+                                        Log.i("ExternalStorage", "-> uri=" + uri);
+                                    }
+                                });
+
+                        Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", pictureFile);
+
+
+                        if (contentUri != null) {
+                            boulderProblemInfo.setFinalBitmapUri(contentUri);
+                            Intent shareIntent = new Intent();
+                            shareIntent.setAction(Intent.ACTION_SEND);
+                            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
+                            shareIntent.setDataAndType(contentUri, context.getContentResolver().getType(contentUri));
+                            shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+                            startActivity(Intent.createChooser(shareIntent, "Choose an app"));
+                        }
+                        return result;
                     }
 
-                    // Tell the media scanner about the new file so that it is
-                    // immediately available to the user.
-                    MediaScannerConnection.scanFile(mainActivity, new String[] { pictureFile.toString() }, null,
-                            new MediaScannerConnection.OnScanCompletedListener() {
-                                public void onScanCompleted(String path, Uri uri) {
-                                    Log.i("ExternalStorage", "Scanned " + path + ":");
-                                    Log.i("ExternalStorage", "-> uri=" + uri);
-                                }
-                            });
-
-                    Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", pictureFile);
-
-
-                    if (contentUri != null) {
-                        boulderProblemInfo.setFinalBitmapUri(contentUri);
-                        Intent shareIntent = new Intent();
-                        shareIntent.setAction(Intent.ACTION_SEND);
-                        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
-                        shareIntent.setDataAndType(contentUri, context.getContentResolver().getType(contentUri));
-                        shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
-                        startActivity(Intent.createChooser(shareIntent, "Choose an app"));
+                    @Override
+                    protected void onPostExecute(Object o) {
+                        if (o != null) {
+                            Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
+                        }
+                        addOrUpdateBoulderProblem(boulderProblemInfo);
+                        mainActivity.setHasUnsavedChanges(false);
+                        mainActivity.setSaveIconVisibility(false);
+                        super.onPostExecute(o);
                     }
-                    return result;
-                }
-
-                @Override
-                protected void onPostExecute(Object o) {
-                    if(o != null){
-                        Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
-                    }
-                    addOrUpdateBoulderProblem(boulderProblemInfo);
-                    super.onPostExecute(o);
-                }
-            };
-            fileTask.execute();
-            // save bitmap to cache directory
+                };
+                fileTask.execute();
+                // save bitmap to cache directory
 
 //            try {
 //
@@ -213,10 +249,94 @@ public class BoulderFragment extends Fragment {
 //                shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
 //                startActivity(Intent.createChooser(shareIntent, "Choose an app"));
 //            }
-            return true;
+                return true;
+            }
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void saveImageFile(final MainActivity mainActivity) {
+        mainActivity.checkAndGetWritePermission();
+
+        final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
+
+        BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
+        Canvas canvas = new Canvas(resultBitmap);
+        bpView.drawOnCustomCanvas(canvas);
+
+        final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
+
+
+        final Context context = mainActivity;
+        //mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
+
+        AsyncTask fileTask = new AsyncTask() {
+            @Override
+            protected Object doInBackground(Object[] objects) {
+                Object result = null;
+                File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
+
+                if (!directory.exists()) {
+                    directory.mkdirs();
+                }
+                File pictureFile;
+                if(boulderProblemInfo.getFinalBitmapUri() != null){
+                    pictureFile = new File(boulderProblemInfo.getFinalBitmapUri().getPath());
+                    if(pictureFile.exists())
+                        pictureFile.delete();
+                }
+
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                String name = "boulder_" + timeStamp + ".jpg";
+                pictureFile = new File(directory, name);
+
+                try {
+                    if(!pictureFile.exists())
+                        pictureFile.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    FileOutputStream out = new FileOutputStream(pictureFile);
+                    resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                    out.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                result = "Image saved";
+                // Tell the media scanner about the new file so that it is
+                // immediately available to the user.
+                MediaScannerConnection.scanFile(mainActivity, new String[] { pictureFile.toString() }, null,
+                        new MediaScannerConnection.OnScanCompletedListener() {
+                            public void onScanCompleted(String path, Uri uri) {
+                                Log.i("ExternalStorage", "Scanned " + path + ":");
+                                Log.i("ExternalStorage", "-> uri=" + uri);
+                            }
+                        });
+
+                Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", pictureFile);
+
+
+                if (contentUri != null) {
+                    boulderProblemInfo.setFinalBitmapUri(contentUri);
+                }
+                return result;
+            }
+
+            @Override
+            protected void onPostExecute(Object o) {
+                if(o != null){
+                    Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
+                }
+                addOrUpdateBoulderProblem(boulderProblemInfo);
+                mainActivity.setHasUnsavedChanges(false);
+                mainActivity.setSaveIconVisibility(false);
+                super.onPostExecute(o);
+            }
+        };
+        fileTask.execute();
     }
 
     public long addOrUpdateBoulderProblem(BoulderProblemInfo info){

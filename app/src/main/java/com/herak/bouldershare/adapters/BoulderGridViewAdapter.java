@@ -9,11 +9,14 @@ import android.graphics.drawable.Drawable;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -32,33 +35,33 @@ import java.io.IOException;
 public class BoulderGridViewAdapter extends CursorAdapter {
     private LayoutInflater cursorInflater;
 
+    private int screenWidthInPx;
+
     public BoulderGridViewAdapter(Context context, Cursor data) {
         super(context,data, 0);
         cursorInflater = (LayoutInflater) context.getSystemService(
                 Context.LAYOUT_INFLATER_SERVICE);
-
+        DisplayMetrics metrics = new DisplayMetrics();
+        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        wm.getDefaultDisplay().getMetrics(metrics);
+        screenWidthInPx = metrics.widthPixels;
 
     }
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-        final int THUMB_SIZE = 300;
+        final int THUMB_SIZE = screenWidthInPx / 6;
         //TODO figure out how this works on different screensizes and make it responsive
         TextView boulderImageViewText = (TextView) view.findViewById(R.id.boulderImageViewText);
         final ImageView boulderImageView = (ImageView) view.findViewById(R.id.boulderImageView);
         if(cursor.getString( cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI) ) != null) {
-//            boulderImageView.setImageURI(Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI))));
             Uri finalBitmapUri = Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI)));
-
-//
             Picasso.with(context)
                     .load(finalBitmapUri)
                     .resize(THUMB_SIZE*3,THUMB_SIZE*4)
                     .centerCrop()
                     .into(boulderImageView);
-
-
-//
         }
 
         Typeface roboto = Typeface.createFromAsset(context.getResources().getAssets(), "font/Roboto-Medium.ttf");
