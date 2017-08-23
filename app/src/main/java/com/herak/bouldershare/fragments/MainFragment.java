@@ -10,10 +10,8 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.GridView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.herak.bouldershare.MainActivity;
@@ -95,8 +93,9 @@ public class MainFragment extends Fragment {
                 }
                 boulder.setHolds(holds);
 
-                ((MainActivity) getActivity()).setmBoulderProblemInfo(boulder);
-                ((MainActivity) getActivity()).changeFragment(MainActivity.FRAGMENT_TYPE.BOULDER_FRAGMENT);
+                MainActivity mainActivity = (MainActivity) getActivity();
+                mainActivity.setmBoulderProblemInfo(boulder);
+                mainActivity.changeFragment(MainActivity.FRAGMENT_TYPE.BOULDER_FRAGMENT);
 
             }
         });

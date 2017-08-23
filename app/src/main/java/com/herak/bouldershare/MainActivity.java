@@ -39,7 +39,6 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static android.R.attr.data;
 import static android.R.attr.rotation;
 
 public class MainActivity extends AppCompatActivity
@@ -69,8 +68,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     public BoulderProblemInfo getmBoulderProblemInfo() {
-        if(mBoulderProblemInfo.getInputBitmapUri() == null)
-            mBoulderProblemInfo.setInputBitmapUri(mBoulderBitmapUri);
         return mBoulderProblemInfo;
     }
 
