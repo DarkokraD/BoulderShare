@@ -23,7 +23,7 @@ public class BoulderDbHelper extends SQLiteOpenHelper {
                 BoulderContract.BoulderProblemInfoEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR + " TEXT, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI + " TEXT NOT NULL, " +
-                BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI + " TEXT, " +
+                BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI + " TEXT NOT NULL, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME + " TEXT, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT + " TEXT, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE + " TEXT)";
