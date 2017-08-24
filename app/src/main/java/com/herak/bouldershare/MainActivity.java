@@ -161,14 +161,15 @@ public class MainActivity extends AppCompatActivity
                 mBoulderBitmapUri = imageUri;
                 InputStream imageStream = getContentResolver().openInputStream(imageUri);
                 final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
-                try {
-                    mBoulderBitmap = modifyOrientation(selectedImage, imageStream);
+//                try {
+//                    mBoulderBitmap = modifyOrientation(selectedImage, imageStream);
+                    mBoulderBitmap = selectedImage;
                     nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
                     mBoulderProblemInfo = new BoulderProblemInfo();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
-                }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
+//                }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
                 Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
@@ -183,30 +184,37 @@ public class MainActivity extends AppCompatActivity
 
         ExifInterface ei = new ExifInterface(imageStream);
         int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-        int rotateBecauseOfWidthHeightRatio = 0;
 
-        if(bitmap.getWidth() > bitmap.getHeight())
-            rotateBecauseOfWidthHeightRatio = 90;
+        Bitmap retBitmap;
 
         switch (orientation) {
             case ExifInterface.ORIENTATION_ROTATE_90:
-                return rotate(bitmap, 90 + rotateBecauseOfWidthHeightRatio);
-
+                retBitmap = rotate(bitmap, 90);
+                break;
             case ExifInterface.ORIENTATION_ROTATE_180:
-                return rotate(bitmap, 180 + rotateBecauseOfWidthHeightRatio);
-
+                retBitmap = rotate(bitmap, 180);
+                break;
             case ExifInterface.ORIENTATION_ROTATE_270:
-                return rotate(bitmap, 270 + rotateBecauseOfWidthHeightRatio);
-
+                retBitmap = rotate(bitmap, 270);
+                break;
             case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
-                return flip(bitmap, true, false);
-
+                retBitmap = flip(bitmap, true, false);
+                break;
             case ExifInterface.ORIENTATION_FLIP_VERTICAL:
-                return flip(bitmap, false, true);
-
+                retBitmap = flip(bitmap, false, true);
+                break;
             default:
-                return rotate(bitmap, 0 + rotateBecauseOfWidthHeightRatio);
+                retBitmap = rotate(bitmap, 0);
         }
+
+        int rotateBecauseOfWidthHeightRatio = 0;
+        if(retBitmap.getWidth() > retBitmap.getHeight())
+            rotateBecauseOfWidthHeightRatio = 90;
+        if(rotateBecauseOfWidthHeightRatio != 0){
+            retBitmap = rotate(retBitmap, rotateBecauseOfWidthHeightRatio);
+        }
+
+        return retBitmap;
     }
 
     public static Bitmap rotate(Bitmap bitmap, float degrees) {
