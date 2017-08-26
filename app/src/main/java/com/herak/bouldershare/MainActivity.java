@@ -1,8 +1,10 @@
 package com.herak.bouldershare;
 
 import android.Manifest;
+import android.support.v4.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -12,6 +14,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.media.ExifInterface;
@@ -23,6 +26,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -32,7 +36,6 @@ import com.herak.bouldershare.fragments.InfoFragment;
 import com.herak.bouldershare.fragments.MainFragment;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -156,24 +159,25 @@ public class MainActivity extends AppCompatActivity
 
 
         }else if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK) {
-            try {
+//            try {
                 final Uri imageUri = data.getData();
                 mBoulderBitmapUri = imageUri;
-                InputStream imageStream = getContentResolver().openInputStream(imageUri);
-                final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+//                InputStream imageStream = getContentResolver().openInputStream(imageUri);
+//                final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
 //                try {
 //                    mBoulderBitmap = modifyOrientation(selectedImage, imageStream);
-                    mBoulderBitmap = selectedImage;
+//                    mBoulderBitmap = selectedImage;
                     nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
                     mBoulderProblemInfo = new BoulderProblemInfo();
+                    mBoulderProblemInfo.setInputBitmapUri(imageUri);
 //                } catch (IOException e) {
 //                    e.printStackTrace();
 //                    Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
 //                }
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
-            }
+//            } catch (FileNotFoundException e) {
+//                e.printStackTrace();
+//                Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
+//            }
 
         }else {
             Toast.makeText(this, "You haven't picked an image",Toast.LENGTH_LONG).show();
@@ -251,6 +255,15 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.flayoutMainActivity);
+        if (f instanceof MainFragment) {
+            // Don't remove the main fragment
+        }else{
+            super.onBackPressed();
+        }
+    }
 
     private File createImageFile() throws IOException {
         // Create an image file name
@@ -289,6 +302,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+
         setSupportActionBar(toolbar);
 
         // To get this out of the way
@@ -318,6 +332,50 @@ public class MainActivity extends AppCompatActivity
         });
 
         changeFragment(FRAGMENT_TYPE.MAIN_FRAGMENT);
+
+        runTutorialIfFirstRun();
+
+
+    }
+
+    private void runTutorialIfFirstRun() {
+        //  Declare a new thread to do a preference check
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //  Initialize SharedPreferences
+                SharedPreferences getPrefs = PreferenceManager
+                        .getDefaultSharedPreferences(getBaseContext());
+
+                //  Create a new boolean and preference and set it to true
+                boolean isFirstStart = getPrefs.getBoolean("firstStart", true);
+
+                //  If the activity has never started before...
+                if (isFirstStart) {
+
+                    //  Launch app intro
+                    final Intent i = new Intent(MainActivity.this, IntroActivity.class);
+
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            startActivity(i);
+                        }
+                    });
+
+                    //  Make a new preferences editor
+                    SharedPreferences.Editor e = getPrefs.edit();
+
+                    //  Edit preference to make it false because we don't want this to run again
+                    e.putBoolean("firstStart", false);
+
+                    //  Apply changes
+                    e.apply();
+                }
+            }
+        });
+
+        // Start the thread
+        t.start();
     }
 
     @Override
@@ -326,6 +384,24 @@ public class MainActivity extends AppCompatActivity
         this.menu = menu;
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        String paypalUrl = "https://www.paypal.me/DarkoHerak";
+
+        if(item.getItemId() == R.id.action_donate) {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(paypalUrl));
+            startActivity(browserIntent);
+        }else if (item.getItemId() == R.id.action_tutorial){
+            //TODO run tutorial
+            Intent intent = new Intent(this, IntroActivity.class);
+            startActivity(intent);
+
+
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
