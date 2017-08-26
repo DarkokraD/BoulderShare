@@ -146,6 +146,8 @@ public class MainFragment extends Fragment {
         menu.findItem(R.id.action_share).setVisible(false);
     }
 
+
+
     @Override
     public void onStart() {
         super.onStart();
