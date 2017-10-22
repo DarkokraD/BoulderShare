@@ -260,6 +260,7 @@ public class MainActivity extends AppCompatActivity
         Fragment f = getSupportFragmentManager().findFragmentById(R.id.flayoutMainActivity);
         if (f instanceof MainFragment) {
             // Don't remove the main fragment
+            finish();
         }else{
             super.onBackPressed();
         }
