@@ -18,8 +18,10 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.herak.bouldershare.MainActivity;
+import com.herak.bouldershare.R;
 import com.herak.bouldershare.data.BoulderContract;
 import com.herak.bouldershare.data.BoulderProvider;
 import com.herak.bouldershare.enums.HoldType;
@@ -27,6 +29,7 @@ import com.herak.bouldershare.enums.HoldType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
+import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,6 +85,11 @@ public class BoulderProblemView extends View {
 
         this.mScaleFactor = 0;
         this.mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
+
+        if(mBoulderProblemInfo == null){
+            //mainActivity didn't contain the boulder problem info
+            mBoulderProblemInfo = new BoulderProblemInfo();
+        }
 
         if (mBoulderProblemInfo.getInputBitmapUri() != null){
             //load bitmap from input bitmap Uri
@@ -180,13 +188,20 @@ public class BoulderProblemView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if(mScaledBitmap == null){
-            if(mBoulderBitmap.getWidth()/canvas.getWidth() > mBoulderBitmap.getHeight()/canvas.getHeight()){
-                mScaleFactor = (double) mBoulderBitmap.getWidth()/canvas.getWidth();
-            }else{
-                mScaleFactor = (double) mBoulderBitmap.getHeight()/canvas.getHeight();
+        if(mBoulderBitmap != null){
+            if(mScaledBitmap == null){
+                if(mBoulderBitmap.getWidth()/canvas.getWidth() > mBoulderBitmap.getHeight()/canvas.getHeight()){
+                    mScaleFactor = (double) mBoulderBitmap.getWidth()/canvas.getWidth();
+                }else{
+                    mScaleFactor = (double) mBoulderBitmap.getHeight()/canvas.getHeight();
+                }
+                mScaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), (int) (mBoulderBitmap.getWidth()/mScaleFactor), (int) (mBoulderBitmap.getHeight()/mScaleFactor), true);
             }
-            mScaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), (int) (mBoulderBitmap.getWidth()/mScaleFactor), (int) (mBoulderBitmap.getHeight()/mScaleFactor), true);
+        }else{
+            //mBoulderBitmap is null, abort drawing and go to main activity with a message
+            mainActivity.changeFragment(MainActivity.FRAGMENT_TYPE.MAIN_FRAGMENT);
+            Toast.makeText(getContext(), R.string.no_mboulderbitmap, Toast.LENGTH_LONG).show();
+            return;
         }
 
         mBoulderProblemInfo.setHolds(holds); //TODO decide if this should be moved somewhere done not as often (i.e. on database save)
