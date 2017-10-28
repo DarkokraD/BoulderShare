@@ -20,6 +20,7 @@
     <string name="action_tutorial">Tutorial</string>
     <string name="app_intro">Tutorial</string>
     <string name="no_mboulderbitmap">Unable to load the image, please try again</string>
+    <string name="no_read_permission">Unable to load the image because WRITE_EXTERNAL_STORAGE permission was denied. Please try again.</string>
 
     <string-array name="grades_array">
         <item>Unknown</item>

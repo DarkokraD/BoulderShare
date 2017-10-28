@@ -1,6 +1,7 @@
 package com.herak.bouldershare;
 
 import android.Manifest;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
@@ -483,6 +484,7 @@ public class MainActivity extends AppCompatActivity
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
 
+
                 // Show an explanation to the user *asynchronously* -- don't block
                 // this thread waiting for the user's response! After the user
                 // sees the explanation, try again to request the permission.
@@ -500,6 +502,17 @@ public class MainActivity extends AppCompatActivity
                 // result of the request.
             }
         }
+    }
+
+    @Override
+    public boolean shouldShowRequestPermissionRationale(@NonNull String permission) {
+        switch(permission){
+            case Manifest.permission.WRITE_EXTERNAL_STORAGE:
+            case Manifest.permission.READ_EXTERNAL_STORAGE:
+                return false;
+
+        }
+        return false;
     }
 
     public Uri getmBoulderBitmapUri() {

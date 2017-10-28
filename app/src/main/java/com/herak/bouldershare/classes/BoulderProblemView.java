@@ -1,7 +1,9 @@
 package com.herak.bouldershare.classes;
 
+import android.Manifest;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -10,6 +12,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.v4.content.ContextCompat;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -93,6 +96,12 @@ public class BoulderProblemView extends View {
 
         if (mBoulderProblemInfo.getInputBitmapUri() != null){
             //load bitmap from input bitmap Uri
+            int permissionCheck = ContextCompat.checkSelfPermission(mainActivity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED){
+                mainActivity.changeFragment(MainActivity.FRAGMENT_TYPE.MAIN_FRAGMENT);
+                Toast.makeText(getContext(), R.string.no_read_permission, Toast.LENGTH_LONG).show();
+            }
+
             try {
                 this.mBoulderBitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),mBoulderProblemInfo.getInputBitmapUri());
             } catch (IOException e) {
