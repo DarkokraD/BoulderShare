@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 
 public class BoulderDbHelper extends SQLiteOpenHelper {
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     static final String DATABASE_NAME = "boulder.db";
 
@@ -26,7 +26,9 @@ public class BoulderDbHelper extends SQLiteOpenHelper {
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI + " TEXT NOT NULL, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME + " TEXT, " +
                 BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT + " TEXT, " +
-                BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE + " TEXT)";
+                BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE + " TEXT, " +
+                BoulderContract.BoulderProblemInfoEntry.COLUMN_REFERENCE_WIDTH + " INTEGER NOT NULL DEFAULT 0, " +
+                BoulderContract.BoulderProblemInfoEntry.COLUMN_REFERENCE_HEIGHT + " INTEGER NOT NULL DEFAULT 0)";
 
         final String  SQL_CREATE_HOLDS_TABLE = "CREATE TABLE " + BoulderContract.HoldsEntry.TABLE_NAME + " (" +
                 BoulderContract.HoldsEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -45,14 +47,13 @@ public class BoulderDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-//            final String SQL_ALTER_BOULDER_TABLE = "ALTER TABLE " + BoulderContract.BoulderProblemInfoEntry.TABLE_NAME
-//                    + " ADD COLUMN " + BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI + ";";
-//        db.execSQL(SQL_ALTER_BOULDER_TABLE);
-
-// This code would delete the tables and recreate them. Use alter table to add columns instead
-        //https://www.sqlite.org/lang_altertable.html
-//        db.execSQL("DROP TABLE IF EXISTS " + BoulderContract.BoulderProblemInfoEntry.TABLE_NAME);
-//        db.execSQL("DROP TABLE IF EXISTS " + BoulderContract.HoldsEntry.TABLE_NAME);
-//        onCreate(db);
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE " + BoulderContract.BoulderProblemInfoEntry.TABLE_NAME
+                    + " ADD COLUMN " + BoulderContract.BoulderProblemInfoEntry.COLUMN_REFERENCE_WIDTH
+                    + " INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + BoulderContract.BoulderProblemInfoEntry.TABLE_NAME
+                    + " ADD COLUMN " + BoulderContract.BoulderProblemInfoEntry.COLUMN_REFERENCE_HEIGHT
+                    + " INTEGER NOT NULL DEFAULT 0");
+        }
     }
 }

@@ -55,7 +55,7 @@ public class Hold {
         this.circleRadius = circleRadius;
     }
 
-    HoldType type;
+    HoldType type = HoldType.START_HOLD;
     int circleRadius;
 
     public Hold(float x, float y){
@@ -75,6 +75,19 @@ public class Hold {
 
     public double distanceFrom(Hold hold){
         return Math.sqrt(Math.pow(this.x - hold.x, 2) + Math.pow(this.y - hold.y, 2));
+    }
+
+    public float projectedX(float targetWidth, float referenceWidth) {
+        return x * targetWidth / referenceWidth;
+    }
+
+    public float projectedY(float targetHeight, float referenceHeight) {
+        return y * targetHeight / referenceHeight;
+    }
+
+    public float projectedRadius(float targetWidth, float targetHeight,
+                                 float referenceWidth, float referenceHeight) {
+        return circleRadius * Math.min(targetWidth / referenceWidth, targetHeight / referenceHeight);
     }
 
 

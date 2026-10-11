@@ -1,470 +1,441 @@
 package com.herak.bouldershare.classes;
 
-import android.Manifest;
-import android.content.ContentValues;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Typeface;
-import android.net.Uri;
-import android.provider.MediaStore;
-import android.support.v4.content.ContextCompat;
-import android.util.TypedValue;
+import android.graphics.RectF;
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.os.SystemClock;
 import android.view.GestureDetector;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.view.ViewConfiguration;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
-import com.herak.bouldershare.data.BoulderContract;
-import com.herak.bouldershare.data.BoulderProvider;
 import com.herak.bouldershare.enums.HoldType;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.text.BreakIterator;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static com.herak.bouldershare.enums.HoldType.REGULAR_HOLD;
-import static com.herak.bouldershare.enums.HoldType.START_HOLD;
-import static com.herak.bouldershare.enums.HoldType.TOP_HOLD;
-
-/**
- * Created by darko on 23.4.2017..
- */
-
+/** Photo navigation never changes the persisted marker reference space or export. */
 public class BoulderProblemView extends View {
+    private final MainActivity activity;
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final RectF imageRect = new RectF();
+    private final RectF displayedRect = new RectF();
+    private final ImageViewport viewport = new ImageViewport();
+    private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();
+    private final GestureDetector gestures;
+    private final ScaleGestureDetector scales;
+    private final int touchSlop;
+    private final float minimumHitRadius;
+    private BoulderProblemInfo info;
+    private Bitmap bitmap;
+    private HoldType currentType = HoldType.START_HOLD;
+    private Hold downHold, selectedForResize;
+    private PendingTap pendingTap;
+    private PendingTap deferredDoubleTap;
+    private Hold doubleTapTarget;
+    private boolean doubleTapPending;
+    private int activePointer = MotionEvent.INVALID_POINTER_ID;
+    private float downX, downY, lastX, lastY, grabX, grabY, scaleFocusX, scaleFocusY;
+    private boolean dragging, panning, suppressSinglePointer, released, loadFailed, choosingResize;
+    private OnHoldResizeRequestedListener resizeListener;
 
-    private List<Hold> holds = new ArrayList<Hold>();
-
-    private Paint paint;
-    private int circleRadius;
-    private int minCircleRadius;
-
-    HoldType currentHoldType = START_HOLD;
-    Bitmap mBoulderBitmap;
-
-    ScaleGestureDetector scaleGestureDetector;
-    GestureDetector mGestureDetector;
-    boolean scaleOngoing;
-
-    long lastScale;
-
-    private BoulderProblemInfo mBoulderProblemInfo;
-    MainActivity mainActivity;
-    private Bitmap mScaledBitmap;
-    private double mScaleFactor;
-
-    public BoulderProblemInfo getBoulderProblemInfo() {
-        return mBoulderProblemInfo;
+    public interface OnHoldResizeRequestedListener { void onHoldResizeRequested(Hold hold); }
+    private static class PendingTap {
+        final Hold location, target;
+        PendingTap(Hold location, Hold target) { this.location = location; this.target = target; }
     }
-
-    public void setBoulderProblemInfo(BoulderProblemInfo mBoulderProblemInfo) {
-        this.mBoulderProblemInfo = mBoulderProblemInfo;
-    }
-
-    private void updateBoulderProblemInfo(){
-
-    }
-
-
 
     public BoulderProblemView(Context context) {
         super(context);
-        paint = new Paint();
-
-        this.mainActivity = (MainActivity) context;
-
-        this.mScaleFactor = 0;
-        this.mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
-
-        if(mBoulderProblemInfo == null){
-            //mainActivity didn't contain the boulder problem info
-            mBoulderProblemInfo = new BoulderProblemInfo();
-        }
-
-        if (mBoulderProblemInfo.getInputBitmapUri() != null){
-            //load bitmap from input bitmap Uri
-            int permissionCheck = ContextCompat.checkSelfPermission(mainActivity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            if (permissionCheck != PackageManager.PERMISSION_GRANTED){
-                mainActivity.changeFragment(MainActivity.FRAGMENT_TYPE.MAIN_FRAGMENT);
-                Toast.makeText(getContext(), R.string.no_read_permission, Toast.LENGTH_LONG).show();
+        activity = (MainActivity) context;
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        minimumHitRadius = 24 * getResources().getDisplayMetrics().density;
+        setSaveEnabled(true);
+        info = activity.getmBoulderProblemInfo();
+        if (info == null) info = new BoulderProblemInfo();
+        if (info.getHolds() == null) info.setHolds(new ArrayList<>());
+        bitmap = activity.getmBoulderBitmap();
+        gestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override public boolean onDown(MotionEvent event) { return true; }
+            @Override public boolean onSingleTapUp(MotionEvent event) {
+                if (!canEdit() || suppressSinglePointer || dragging || panning || !inside(event.getX(), event.getY())) return true;
+                if (choosingResize) {
+                    Hold selected = downHold;
+                    if (selected != null && info.getHolds().contains(selected)) {
+                        choosingResize = false;
+                        selectedForResize = selected;
+                        pendingTap = null;
+                        if (resizeListener != null) resizeListener.onHoldResizeRequested(selected);
+                    }
+                } else pendingTap = new PendingTap(point(event.getX(), event.getY()), downHold);
+                return true;
             }
-
-            try {
-                this.mBoulderBitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),mBoulderProblemInfo.getInputBitmapUri());
-            } catch (IOException e) {
-                e.printStackTrace();
+            @Override public boolean onSingleTapConfirmed(MotionEvent event) { flushPendingSingleTap(); return true; }
+            @Override public boolean onDoubleTap(MotionEvent event) {
+                if (!canEdit() || suppressSinglePointer || choosingResize || selectedForResize != null) return true;
+                deferredDoubleTap = pendingTap;
+                pendingTap = null;
+                doubleTapTarget = downHold;
+                doubleTapPending = true;
+                return true;
             }
-        }else{
-            this.mBoulderBitmap = mainActivity.getmBoulderBitmap();
-            this.mBoulderProblemInfo.setInputBitmapUri(mainActivity.getmBoulderBitmapUri());
-        }
-
-        try {
-                InputStream imageStream = context.getContentResolver().openInputStream(mBoulderProblemInfo.getInputBitmapUri());
-                this.mBoulderBitmap = MainActivity.modifyOrientation(this.mBoulderBitmap, imageStream);
-                mainActivity.setmBoulderBitmap(this.mBoulderBitmap);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if( mBoulderProblemInfo.getHolds() != null && !mBoulderProblemInfo.getHolds().isEmpty() ){
-            this.holds = mBoulderProblemInfo.getHolds();
-        }
-//        this.mBoulderProblemInfo.setInputBitmapUri(mainActivity.getmBoulderBitmapUri());
-        scaleGestureDetector = new ScaleGestureDetector(context, new MyOnScaleGestureListener(this));
-        mGestureDetector = new GestureDetector(context, new GestureListener());
-
-    }
-
-    public Canvas drawOnCustomCanvas(Canvas canvas){
-        drawOnCanvas(canvas, mScaleFactor);
-
-        return canvas;
-    }
-
-    private void drawOnCanvas(Canvas canvas, double scaleFactor) {
-        if(mainActivity != null) {
-            mBoulderProblemInfo = mainActivity.getmBoulderProblemInfo();
-        }
-        circleRadius = Math.round(canvas.getHeight() / 25f);
-        minCircleRadius = Math.round(circleRadius / 2f);
-        paint.setStrokeWidth(Math.round(canvas.getHeight() / 160f));
-        paint.setStyle(Paint.Style.STROKE);
-
-        for(Hold hold : holds){
-            switch(hold.type){
-                case REGULAR_HOLD:
-                    paint.setColor(Color.RED);
-                    break;
-                case START_HOLD:
-                    paint.setColor(Color.GREEN);
-                    break;
-                case TOP_HOLD:
-                    paint.setColor(Color.MAGENTA);
-                    break;
-            }
-            canvas.drawCircle((int) (hold.x * scaleFactor), (int) (hold.y * scaleFactor), (int) (hold.circleRadius * scaleFactor), paint);
-        }
-
-        if(mBoulderProblemInfo != null){
-
-            if(mBoulderProblemInfo.getAuthor() != null
-                    || mBoulderProblemInfo.getName() != null
-                    || mBoulderProblemInfo.getGrade() != null
-                    || mBoulderProblemInfo.getComment() != null ){
-                LinearLayout layout = new LinearLayout(mainActivity);
-
-                Typeface roboto = Typeface.createFromAsset(mainActivity.getResources().getAssets(), "font/Roboto-Medium.ttf");
-
-                TextView textView = new TextView(mainActivity);
-                textView.setText(getInfo(mBoulderProblemInfo));
-                textView.setVisibility(View.VISIBLE);
-                textView.setBackgroundColor(Color.argb(180, 30, 30, 30));
-                textView.setTextColor(Color.parseColor("#45BBDC"));
-                textView.setTypeface(roboto);
-                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, (int) (16 * scaleFactor));
-                textView.setPadding(10, 10, 10, 10);
-                if(scaleFactor == 1){
-                    textView.setWidth(mScaledBitmap.getWidth());
-                }else{
-                    textView.setWidth(canvas.getWidth());
+            @Override public boolean onDoubleTapEvent(MotionEvent event) {
+                if (event.getActionMasked() == MotionEvent.ACTION_UP && doubleTapPending) {
+                    Hold existing = doubleTapTarget;
+                    if (canEdit() && !suppressSinglePointer && !dragging && !panning
+                            && existing != null && info.getHolds().contains(existing)) {
+                        currentType = HoldType.values()[(existing.getType().ordinal() + 1) % HoldType.values().length];
+                        existing.setType(currentType);
+                        changed();
+                    }
+                    clearDeferredDoubleTap();
                 }
-                textView.setGravity(Gravity.CENTER);
-
-
-                layout.addView(textView);
-                layout.measure(canvas.getWidth(), canvas.getHeight());
-                layout.layout(0, 0, canvas.getWidth(), canvas.getHeight());
-//                canvas.translate(0, 0);
-                layout.draw(canvas);
+                return true;
             }
+        });
+        gestures.setIsLongpressEnabled(false);
+        scales = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override public boolean onScaleBegin(ScaleGestureDetector detector) {
+                scaleFocusX = detector.getFocusX(); scaleFocusY = detector.getFocusY();
+                return isEnabled() && !released;
+            }
+            @Override public boolean onScale(ScaleGestureDetector detector) {
+                if (!isEnabled() || released) return false;
+                float focusX = detector.getFocusX(), focusY = detector.getFocusY();
+                viewport.scaleAndPan(detector.getScaleFactor(), scaleFocusX, scaleFocusY, focusX, focusY);
+                scaleFocusX = focusX; scaleFocusY = focusY;
+                invalidate();
+                return true;
+            }
+        });
+        scales.setQuickScaleEnabled(false);
+        scales.setStylusScaleEnabled(false);
+        setContentDescription(context.getString(R.string.editor_accessibility));
+        if (bitmap == null && info.getInputBitmapUri() != null) {
+            final Context application = context.getApplicationContext();
+            final android.net.Uri input = info.getInputBitmapUri();
+            imageExecutor.execute(() -> {
+                try {
+                    Bitmap loaded = ImageFiles.load(application, input);
+                    post(() -> {
+                        if (released || activity.isFinishing() || activity.isDestroyed()) return;
+                        bitmap = loaded;
+                        activity.setmBoulderBitmap(loaded);
+                        updateImageRect();
+                        invalidate();
+                    });
+                } catch (IOException | RuntimeException error) {
+                    post(() -> {
+                        if (released || activity.isFinishing() || activity.isDestroyed()) return;
+                        loadFailed = true;
+                        invalidate();
+                        new MaterialAlertDialogBuilder(activity)
+                                .setTitle(R.string.photo_unavailable).setMessage(R.string.relink_photo_message)
+                                .setPositiveButton(R.string.choose_photo, (dialog, which) -> activity.requestPhotoRelink())
+                                .setNegativeButton(R.string.cancel, (dialog, which) -> activity.changeFragment(MainActivity.FRAGMENT_TYPE.MAIN_FRAGMENT))
+                                .setOnCancelListener(dialog -> activity.changeFragment(MainActivity.FRAGMENT_TYPE.MAIN_FRAGMENT)).show();
+                    });
+                }
+            });
         }
     }
 
-    @Override
-    protected void onDraw(Canvas canvas) {
-        if(mBoulderBitmap != null){
-            if(mScaledBitmap == null){
-                if(mBoulderBitmap.getWidth()/canvas.getWidth() > mBoulderBitmap.getHeight()/canvas.getHeight()){
-                    mScaleFactor = (double) mBoulderBitmap.getWidth()/canvas.getWidth();
-                }else{
-                    mScaleFactor = (double) mBoulderBitmap.getHeight()/canvas.getHeight();
-                }
-                mScaledBitmap = Bitmap.createScaledBitmap(mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true), (int) (mBoulderBitmap.getWidth()/mScaleFactor), (int) (mBoulderBitmap.getHeight()/mScaleFactor), true);
+    public BoulderProblemInfo getBoulderProblemInfo() { return info; }
+    public void setBoulderProblemInfo(BoulderProblemInfo value) { cancelHoldResize(); info = value; invalidate(); }
+    public boolean isImageReady() { return bitmap != null && !imageRect.isEmpty(); }
+    private boolean canEdit() { return isEnabled() && !released && isImageReady(); }
+
+    /** A completed tap retains the exact hit selected at its original pointer down. */
+    public void flushPendingSingleTap() {
+        PendingTap tap = pendingTap;
+        pendingTap = null;
+        if (tap == null || !canEdit() || choosingResize || selectedForResize != null) return;
+        if (tap.target != null) {
+            if (!info.getHolds().remove(tap.target)) return;
+        } else {
+            tap.location.setType(currentType);
+            tap.location.setCircleRadius(Math.max(1, Math.round(info.getReferenceHeight() / 25f)));
+            info.getHolds().add(tap.location);
+        }
+        changed(); performClick();
+    }
+
+    public void resetViewport() { flushPendingSingleTap(); cancelGestures(); viewport.reset(); invalidate(); }
+    public void setOnHoldResizeRequestedListener(OnHoldResizeRequestedListener listener) { resizeListener = listener; }
+    public boolean isChoosingHoldToResize() { return choosingResize; }
+    public boolean requestHoldResize() {
+        flushPendingSingleTap(); cancelGestures(); selectedForResize = null;
+        choosingResize = canEdit() && !info.getHolds().isEmpty();
+        return choosingResize;
+    }
+    public void cancelHoldResize() {
+        choosingResize = false; selectedForResize = null; cancelGestures(); invalidate();
+    }
+    public void resizeHold(Hold hold, int radius) {
+        if (hold != selectedForResize || !canEdit() || !info.getHolds().contains(hold)) return;
+        selectedForResize = null;
+        int bounded = Math.max(1, radius);
+        if (hold.getCircleRadius() != bounded) { hold.setCircleRadius(bounded); changed(); }
+    }
+
+    private void cancelTapRecognition() {
+        pendingTap = null;
+        clearDeferredDoubleTap();
+        if (gestures == null) return;
+        long now = SystemClock.uptimeMillis();
+        MotionEvent cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0, 0, 0);
+        try { gestures.onTouchEvent(cancel); } finally { cancel.recycle(); }
+    }
+    private void clearDeferredDoubleTap() {
+        deferredDoubleTap = null; doubleTapTarget = null; doubleTapPending = false;
+    }
+
+    /** A second press may be a drag rather than a double tap; never apply its deletion/type action. */
+    private void recoverFirstTapForDrag() {
+        if (!doubleTapPending) return;
+        PendingTap first = deferredDoubleTap;
+        clearDeferredDoubleTap();
+        if (first != null && first.target == null) {
+            first.location.setType(currentType);
+            first.location.setCircleRadius(Math.max(1, Math.round(info.getReferenceHeight() / 25f)));
+            info.getHolds().add(first.location);
+            changed();
+            downHold = hit(downX, downY);
+            if (downHold != null) {
+                Hold location = point(downX, downY);
+                grabX = location.getX() - downHold.getX(); grabY = location.getY() - downHold.getY();
             }
-        }else{
-            //mBoulderBitmap is null, abort drawing and go to main activity with a message
-            mainActivity.changeFragment(MainActivity.FRAGMENT_TYPE.MAIN_FRAGMENT);
-            Toast.makeText(getContext(), R.string.no_mboulderbitmap, Toast.LENGTH_LONG).show();
+        }
+    }
+    private void clearPointerState() {
+        activePointer = MotionEvent.INVALID_POINTER_ID; downHold = null;
+        dragging = panning = false;
+    }
+    private void cancelGestures() {
+        cancelTapRecognition(); clearPointerState(); suppressSinglePointer = false;
+        if (scales == null) return;
+        long now = SystemClock.uptimeMillis();
+        MotionEvent cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0, 0, 0);
+        try { scales.onTouchEvent(cancel); } finally { cancel.recycle(); }
+    }
+    @Override public void setEnabled(boolean enabled) {
+        if (!enabled) { choosingResize = false; selectedForResize = null; cancelGestures(); }
+        super.setEnabled(enabled);
+    }
+
+    private void updateImageRect() {
+        if (bitmap == null || getWidth() == 0 || getHeight() == 0) return;
+        viewport.configure(getWidth(), getHeight(), bitmap.getWidth(), bitmap.getHeight());
+        float width = viewport.getFitWidth(), height = viewport.getFitHeight();
+        imageRect.set((getWidth() - width) / 2, (getHeight() - height) / 2,
+                (getWidth() + width) / 2, (getHeight() + height) / 2);
+        if (info.getReferenceWidth() <= 0 || info.getReferenceHeight() <= 0) {
+            if (info.getHolds().isEmpty()) info.setReferenceSize(bitmap.getWidth(), bitmap.getHeight());
+            else info.setReferenceSize(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)));
+        }
+    }
+    @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) { updateImageRect(); }
+    @Override protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (bitmap == null) {
+            paint.setColor(Color.LTGRAY);
+            paint.setTextSize(16 * getResources().getDisplayMetrics().scaledDensity);
+            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(getContext().getString(loadFailed ? R.string.photo_unavailable : R.string.image_loading),
+                    getWidth() / 2f, getHeight() / 2f, paint);
+            if (loadFailed) canvas.drawText(getContext().getString(R.string.choose_photo),
+                    getWidth() / 2f, getHeight() / 2f + paint.getTextSize() * 1.8f, paint);
             return;
         }
-
-        mBoulderProblemInfo.setHolds(holds); //TODO decide if this should be moved somewhere done not as often (i.e. on database save)
-
-        canvas.drawBitmap(mScaledBitmap, 0, 0, paint);
-        drawOnCanvas(canvas, 1);
-
+        updateImageRect();
+        displayedRect.set(viewport.getLeft(), viewport.getTop(),
+                viewport.getLeft() + viewport.getImageWidth(), viewport.getTop() + viewport.getImageHeight());
+        paint.setStyle(Paint.Style.FILL);
+        canvas.drawBitmap(bitmap, null, displayedRect, paint);
+        canvas.save(); canvas.clipRect(displayedRect); canvas.translate(displayedRect.left, displayedRect.top);
+        drawAnnotations(canvas, info, displayedRect.width(), displayedRect.height()); canvas.restore();
     }
-
-    private String getInfo(BoulderProblemInfo boulderProblemInfo){
-        String infoText = "";
-        if(mBoulderProblemInfo.getName() != null && !mBoulderProblemInfo.getName().equals("")){
-            infoText = mBoulderProblemInfo.getName();
-        }
-        if(mBoulderProblemInfo.getGrade() != null && !mBoulderProblemInfo.getGrade().equals("")){
-            if(infoText.length() > 0){
-                infoText += " (" + mBoulderProblemInfo.getGrade() + ")";
-            }else {
-                infoText += mBoulderProblemInfo.getGrade();
-            }
-        }
-        if(mBoulderProblemInfo.getAuthor() != null && !mBoulderProblemInfo.getAuthor().equals("")){
-            if(infoText.length() > 0){
-                infoText += " by " + mBoulderProblemInfo.getAuthor();
-            }else{
-                infoText += mBoulderProblemInfo.getAuthor();
-            }
-        }
-        if(mBoulderProblemInfo.getComment() != null && !mBoulderProblemInfo.getComment().equals("")){
-            if(infoText.length() > 0){
-                infoText += "\n" + mBoulderProblemInfo.getComment();
-            }else{
-                infoText += mBoulderProblemInfo.getComment();
-            }
-        }
-        return infoText;
+    public Canvas drawOnCustomCanvas(Canvas canvas) {
+        drawAnnotations(canvas, info, canvas.getWidth(), canvas.getHeight()); return canvas;
     }
-
-    long actionDownTimestamp;
-    private final long LONG_PRESS_DURATION = 500;
-    private boolean moveInitiated = false;
-    private Hold holdBeingMoved;
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        scaleGestureDetector.onTouchEvent(event);
-        mGestureDetector.onTouchEvent(event);
-
-
-
-
-        if(event.getPointerCount() == 1) {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    actionDownTimestamp = System.currentTimeMillis();
-                    unsavedChangesDetected();
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    Hold currentPosition = new Hold(event.getX(), event.getY());
-                    if(holdBeingMoved == null) holdBeingMoved = getExistingHold(currentPosition);
-                    if(moveInitiated ||
-                            System.currentTimeMillis()-actionDownTimestamp > 200 &&
-                            holdBeingMoved != null &&
-                            holdBeingMoved.distanceFrom(currentPosition) > 10){
-                        holdBeingMoved.x = currentPosition.x;
-                        holdBeingMoved.y = currentPosition.y;
-                        moveInitiated = true;
-                        invalidate();
-                    }
-                    unsavedChangesDetected();
-                    break;
-                case MotionEvent.ACTION_UP:
-//                    if(actionDownTimestamp > lastScale & !moveInitiated) {
-//                        Hold hold = new Hold(event.getX(), event.getY());
-//                        hold.type = currentHoldType;
-//                        hold.circleRadius = circleRadius;
-//
-//                        Hold existingHold = getExistingHold(hold);
-//                        if (System.currentTimeMillis() - actionDownTimestamp < LONG_PRESS_DURATION) {
-//                            //SHORT PRESS
-//                            if (existingHold != null) {
-//                                //Hold exists already so remove it
-//                                removeHold(existingHold);
-//                            } else {
-//                                holds.add(hold);
-//                            }
-//                            invalidate();
-//                        } else {
-//                            //LONG PRESS
-//                            if (existingHold != null) {
-//                                changeHoldType(existingHold);
-//                            } else {
-//                                holds.add(hold);
-//                            }
-//                            invalidate();
-//                        }
-//                    }
-                    moveInitiated = false;
-                    holdBeingMoved = null;
-                    unsavedChangesDetected();
-                    break;
-            }
-        }
-        return true;
-
+    /** Viewport navigation is deliberately absent from exported full-photo coordinates. */
+    public static Bitmap render(Bitmap source, BoulderProblemInfo snapshot) {
+        Bitmap output = source.copy(Bitmap.Config.ARGB_8888, true);
+        drawAnnotations(new Canvas(output), snapshot, output.getWidth(), output.getHeight()); return output;
     }
-
-    private void changeHoldType(Hold hold) {
-        //holds.remove(hold);
-        switch(hold.type){
-            case REGULAR_HOLD:
-                currentHoldType = TOP_HOLD;
-                break;
-            case START_HOLD:
-                currentHoldType = REGULAR_HOLD;
-                break;
-            case TOP_HOLD:
-                currentHoldType = START_HOLD;
-                break;
+    private static void drawAnnotations(Canvas canvas, BoulderProblemInfo info, float width, float height) {
+        if (info == null || info.getReferenceWidth() <= 0 || info.getReferenceHeight() <= 0) return;
+        Paint marker = new Paint(Paint.ANTI_ALIAS_FLAG);
+        marker.setStyle(Paint.Style.STROKE);
+        marker.setStrokeWidth(Math.max(2, height / 160f));
+        if (info.getHolds() != null) for (Hold hold : info.getHolds()) {
+            float x = hold.projectedX(width, info.getReferenceWidth());
+            float y = hold.projectedY(height, info.getReferenceHeight());
+            float radius = hold.projectedRadius(width, height, info.getReferenceWidth(), info.getReferenceHeight());
+            marker.setColor(Color.argb(160, 0, 0, 0));
+            marker.setStrokeWidth(Math.max(3, height / 110f));
+            canvas.drawCircle(x, y, radius, marker);
+            marker.setColor(hold.getType() == HoldType.START_HOLD ? Color.rgb(96, 230, 151)
+                    : hold.getType() == HoldType.TOP_HOLD ? Color.rgb(235, 116, 245) : Color.rgb(255, 105, 91));
+            marker.setStrokeWidth(Math.max(2, height / 160f));
+            canvas.drawCircle(x, y, radius, marker);
         }
-        hold.setType(currentHoldType);
-        //holds.add(hold);
-
-    }
-
-    private void removeHold(Hold existingHold) {
-        if(holds.contains(existingHold)) holds.remove(existingHold);
-    }
-
-    private Hold getExistingHold(Hold clickedHold) {
-        for(Hold hold : holds){
-            if(clickedHold.distanceFrom(hold) <= hold.circleRadius) return hold;
-        }
-        return null;
-    }
-
-    public Bitmap getBitmap()
-    {
-        //this.measure(100, 100);
-        //this.layout(0, 0, 100, 100);
-        this.setDrawingCacheEnabled(true);
-        this.buildDrawingCache();
-        Bitmap bmp = Bitmap.createBitmap(this.getDrawingCache());
-        this.setDrawingCacheEnabled(false);
-
-
-        return bmp;
-    }
-
-    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
-        @Override
-        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
-        float velocityY) {
-
-            return false;
-        }
-
-        @Override
-        public boolean onSingleTapConfirmed(MotionEvent e) {
-            unsavedChangesDetected();
-            Hold hold = new Hold(e.getX(), e.getY());
-            hold.type = currentHoldType;
-            hold.circleRadius = circleRadius;
-
-            Hold existingHold = getExistingHold(hold);
-
-            if (existingHold != null) {
-                //Hold exists already so remove it
-                removeHold(existingHold);
-            } else {
-                holds.add(hold);
-            }
-            invalidate();
-
-            return super.onSingleTapUp(e);
-
-        }
-
-        @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            unsavedChangesDetected();
-            Hold hold = new Hold(e.getX(), e.getY());
-            hold.type = currentHoldType;
-            hold.circleRadius = circleRadius;
-
-            Hold existingHold = getExistingHold(hold);
-
-            if (existingHold != null) {
-                changeHoldType(existingHold);
-                invalidate();
-            }
-
-            return super.onDoubleTap(e);
-        }
-
-        @Override
-        public boolean onDown(MotionEvent e) {
-            return super.onDown(e);
-        }
-
-        @Override
-        public void onLongPress(MotionEvent e) {
-            super.onLongPress(e);
-        }
-
-        @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2,
-        float distanceX, float distanceY) {
-            return super.onScroll(e1, e2, distanceX, distanceY);
-        }
-    }
-
-    public class MyOnScaleGestureListener extends
-            ScaleGestureDetector.SimpleOnScaleGestureListener {
-        private BoulderProblemView view;
-
-        public MyOnScaleGestureListener(BoulderProblemView view){
-            this.view = view;
-        }
-
-        @Override
-        public boolean onScale(ScaleGestureDetector detector) {
-            unsavedChangesDetected();
-            float focusX = detector.getFocusX();
-            float focusY = detector.getFocusY();
-
-            Hold existingHold = view.getExistingHold(new Hold(focusX, focusY));
-
-            if(existingHold != null) {
-                float scaleFactor = detector.getScaleFactor();
-                if(existingHold.circleRadius * scaleFactor > minCircleRadius) {
-                    existingHold.circleRadius *= scaleFactor;
-                    lastScale = System.currentTimeMillis();
-                    invalidate();
-                    return true;
+        String text = title(info);
+        if (!text.isEmpty()) {
+            Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
+            float textSize = Math.max(12, height / 45f), padding = textSize * .6f;
+            label.setTextSize(textSize);
+            java.util.List<String> lines = new ArrayList<>();
+            for (String paragraph : text.split("\\n")) {
+                String remaining = paragraph;
+                while (!remaining.isEmpty()) {
+                    int count = label.breakText(remaining, true, Math.max(1, width - padding * 2), null);
+                    count = Math.max(1, count);
+                    lines.add(remaining.substring(0, count));
+                    remaining = remaining.substring(count);
                 }
             }
-            return false;
-        }
-
-        @Override
-        public boolean onScaleBegin(ScaleGestureDetector detector) {
-            scaleOngoing = true;
-            return true;
-        }
-
-        @Override
-        public void onScaleEnd(ScaleGestureDetector detector) {
-            scaleOngoing = false;
+            label.setColor(Color.argb(185, 20, 29, 34));
+            canvas.drawRect(0, 0, width, padding * 2 + lines.size() * textSize * 1.25f, label);
+            label.setColor(Color.WHITE);
+            label.setTextAlign(Paint.Align.CENTER);
+            float y = padding + textSize;
+            for (String line : lines) { canvas.drawText(line, width / 2, y, label); y += textSize * 1.25f; }
         }
     }
 
-    private void unsavedChangesDetected(){
-        mainActivity.setHasUnsavedChanges(true);
-        mainActivity.setSaveIconVisibility(true);
+    private static String title(BoulderProblemInfo info) {
+        String text = info.getName() == null ? "" : info.getName().trim();
+        if (info.getGrade() != null && !info.getGrade().isEmpty()) text += (text.isEmpty() ? "" : " · ") + info.getGrade();
+        if (info.getAuthor() != null && !info.getAuthor().isEmpty()) text += (text.isEmpty() ? "" : " · ") + info.getAuthor();
+        if (info.getComment() != null && !info.getComment().isEmpty()) text += (text.isEmpty() ? "" : "\n") + info.getComment();
+        return text;
+    }
+
+    private boolean inside(float x, float y) {
+        return bitmap != null && x >= viewport.getLeft() && y >= viewport.getTop()
+                && x <= viewport.getLeft() + viewport.getImageWidth()
+                && y <= viewport.getTop() + viewport.getImageHeight();
+    }
+    private Hold point(float x, float y) {
+        return new Hold(viewport.normalizedX(x) * info.getReferenceWidth(),
+                viewport.normalizedY(y) * info.getReferenceHeight());
+    }
+    private Hold hit(float x, float y) {
+        if (!inside(x, y)) return null;
+        Hold nearest = null;
+        float nearestDistance = Float.MAX_VALUE;
+        for (Hold hold : info.getHolds()) {
+            float hx = viewport.getLeft() + hold.projectedX(viewport.getImageWidth(), info.getReferenceWidth());
+            float hy = viewport.getTop() + hold.projectedY(viewport.getImageHeight(), info.getReferenceHeight());
+            float radius = Math.max(minimumHitRadius, hold.projectedRadius(viewport.getImageWidth(),
+                    viewport.getImageHeight(), info.getReferenceWidth(), info.getReferenceHeight()));
+            float dx = x - hx, dy = y - hy, distance = dx * dx + dy * dy;
+            if (distance <= radius * radius && distance < nearestDistance) { nearest = hold; nearestDistance = distance; }
+        }
+        return nearest;
+    }
+
+    @Override public boolean onTouchEvent(MotionEvent event) {
+        if (loadFailed && isEnabled()) {
+            if (event.getActionMasked() == MotionEvent.ACTION_UP) { performClick(); activity.requestPhotoRelink(); }
+            return true;
+        }
+        if (!canEdit()) return false;
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            suppressSinglePointer = false; dragging = panning = false;
+            activePointer = event.getPointerId(0);
+            downX = lastX = event.getX(); downY = lastY = event.getY();
+            downHold = hit(downX, downY);
+            if (downHold != null) {
+                Hold location = point(downX, downY);
+                grabX = location.getX() - downHold.getX(); grabY = location.getY() - downHold.getY();
+            }
+        } else if (action == MotionEvent.ACTION_POINTER_DOWN) {
+            suppressSinglePointer = true; clearPointerState(); cancelTapRecognition();
+        }
+        scales.onTouchEvent(event);
+        if (suppressSinglePointer) {
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                clearPointerState(); suppressSinglePointer = false;
+            }
+            return true;
+        }
+        int index = event.findPointerIndex(activePointer);
+        if (index < 0) { cancelGestures(); return true; }
+        float x = event.getX(index), y = event.getY(index);
+        if (action == MotionEvent.ACTION_MOVE) {
+            float dx = x - downX, dy = y - downY;
+            if (!dragging && !panning && dx * dx + dy * dy > touchSlop * touchSlop) {
+                recoverFirstTapForDrag();
+                dragging = downHold != null && !choosingResize && selectedForResize == null;
+                panning = !dragging;
+                cancelTapRecognition();
+            }
+            if (dragging && info.getHolds().contains(downHold)) {
+                Hold location = point(x, y);
+                float nx = Math.max(0, Math.min(info.getReferenceWidth(), location.getX() - grabX));
+                float ny = Math.max(0, Math.min(info.getReferenceHeight(), location.getY() - grabY));
+                if (nx != downHold.getX() || ny != downHold.getY()) {
+                    downHold.setX(nx); downHold.setY(ny); changed();
+                }
+            } else if (panning) { viewport.pan(x - lastX, y - lastY); invalidate(); }
+            lastX = x; lastY = y;
+        }
+        if (!dragging && !panning) {
+            gestures.onTouchEvent(event);
+            // GestureDetector cancels its prior confirmation timer on a new down.
+            // A recognized double tap cleared pendingTap in onDoubleTap; otherwise
+            // the prior completed tap must survive the new drag/pan/pinch sequence.
+            if (action == MotionEvent.ACTION_DOWN && pendingTap != null) flushPendingSingleTap();
+        }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            clearPointerState();
+            if (action == MotionEvent.ACTION_CANCEL) cancelGestures();
+        }
+        return true;
+    }
+
+    @Override protected Parcelable onSaveInstanceState() {
+        flushPendingSingleTap();
+        SavedState state = new SavedState(super.onSaveInstanceState());
+        state.zoom = viewport.getZoom(); state.centerX = viewport.getCenterX(); state.centerY = viewport.getCenterY();
+        return state;
+    }
+    @Override protected void onRestoreInstanceState(Parcelable state) {
+        if (!(state instanceof SavedState)) { super.onRestoreInstanceState(state); return; }
+        SavedState saved = (SavedState) state;
+        super.onRestoreInstanceState(saved.getSuperState());
+        viewport.restore(saved.zoom, saved.centerX, saved.centerY); invalidate();
+    }
+    public static class SavedState extends BaseSavedState {
+        float zoom, centerX, centerY;
+        SavedState(Parcelable parent) { super(parent); }
+        SavedState(Parcel source) { super(source); zoom = source.readFloat(); centerX = source.readFloat(); centerY = source.readFloat(); }
+        @Override public void writeToParcel(Parcel destination, int flags) {
+            super.writeToParcel(destination, flags); destination.writeFloat(zoom); destination.writeFloat(centerX); destination.writeFloat(centerY);
+        }
+        public static final Parcelable.Creator<SavedState> CREATOR = new Parcelable.Creator<SavedState>() {
+            @Override public SavedState createFromParcel(Parcel source) { return new SavedState(source); }
+            @Override public SavedState[] newArray(int size) { return new SavedState[size]; }
+        };
+    }
+    @Override public boolean performClick() { super.performClick(); return true; }
+    private void changed() { activity.setHasUnsavedChanges(true); activity.setSaveIconVisibility(true); invalidate(); }
+    public Bitmap getBitmap() { return bitmap == null ? null : render(bitmap, info); }
+    @Override protected void onDetachedFromWindow() {
+        released = true; cancelHoldResize(); imageExecutor.shutdownNow(); super.onDetachedFromWindow();
     }
 }

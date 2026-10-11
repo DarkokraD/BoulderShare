@@ -1,81 +1,107 @@
 package com.herak.bouldershare;
 
-import android.graphics.Color;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
-import com.github.paolorotolo.appintro.AppIntro;
-import com.herak.bouldershare.fragments.TutorialFragment1;
-import com.herak.bouldershare.fragments.TutorialFragment2;
-import com.herak.bouldershare.fragments.TutorialFragment3;
+import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
-/**
- * Created by darko on 25.8.2017..
- */
+import com.google.android.material.button.MaterialButton;
 
-public class IntroActivity extends AppIntro {
+/** A small, accessible walkthrough without a separate onboarding dependency. */
+public class IntroActivity extends AppCompatActivity {
+    private static final String STATE_STEP = "tutorial_step";
+    private static final int[] TITLES = {
+            R.string.tutorial_title_photo, R.string.tutorial_title_holds,
+            R.string.tutorial_title_share
+    };
+    private static final int[] BODIES = {
+            R.string.tutorial_body_photo, R.string.tutorial_body_holds,
+            R.string.tutorial_body_share
+    };
+    private static final int[] IMAGES = {
+            R.drawable.illustration_photo, R.drawable.illustration_holds,
+            R.drawable.illustration_share
+    };
+
+    private int step;
+    private TextView title;
+    private TextView body;
+    private TextView stepLabel;
+    private ImageView image;
+    private MaterialButton previous;
+    private MaterialButton next;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setTheme(R.style.AppTheme_NoActionBar);
-        getSupportActionBar().hide();
-        // Note here that we DO NOT use setContentView();
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_intro);
+        View root = findViewById(R.id.intro_root);
+        int left = root.getPaddingLeft();
+        int top = root.getPaddingTop();
+        int right = root.getPaddingRight();
+        int bottom = root.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(left + insets.left, top + insets.top,
+                    right + insets.right, bottom + insets.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+        ViewCompat.requestApplyInsets(root);
 
-        // Add your slide fragments here.
-        // AppIntro will automatically generate the dots indicator and buttons.
-        addSlide(new TutorialFragment1());
-        addSlide(new TutorialFragment2());
-        addSlide(new TutorialFragment3());
+        title = findViewById(R.id.intro_title);
+        body = findViewById(R.id.intro_body);
+        stepLabel = findViewById(R.id.intro_step);
+        image = findViewById(R.id.intro_image);
+        previous = findViewById(R.id.intro_previous);
+        next = findViewById(R.id.intro_next);
+        ViewCompat.setAccessibilityHeading(title, true);
+        title.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        findViewById(R.id.intro_skip).setOnClickListener(view -> finish());
+        previous.setOnClickListener(view -> {
+            if (step > 0) {
+                step--;
+                showStep();
+            }
+        });
+        next.setOnClickListener(view -> {
+            if (step == TITLES.length - 1) {
+                finish();
+            } else {
+                step++;
+                showStep();
+            }
+        });
+        if (savedInstanceState != null) {
+            step = Math.max(0, Math.min(TITLES.length - 1,
+                    savedInstanceState.getInt(STATE_STEP, 0)));
+        }
+        showStep();
+    }
 
-
-        // Instead of fragments, you can also use our default slide
-        // Just set a title, description, background and image. AppIntro will do the rest.
-//        addSlide(AppIntroFragment.newInstance(title, description, image, backgroundColor));
-
-        // OPTIONAL METHODS
-        // Override bar/separator color.
-//        setBarColor(Color.parseColor("#3F51B5"));
-
-        setBarColor(Color.argb(0,0,0,0));
-//        setBarColor(Color.rgb(255,64,129));
-
-
-        setTitle("");
-
-//        setSeparatorColor(Color.argb(33,0,0,0);
-
-        // Hide Skip/Done button.
-        showSkipButton(true);
-        setProgressButtonEnabled(true);
-
-        setBackButtonVisibilityWithDone(true);
-
-        // Turn vibration on and set intensity.
-        // NOTE: you will probably need to ask VIBRATE permission in Manifest.
-//        setVibrate(true);
-//        setVibrateIntensity(30);
+    private void showStep() {
+        ((ScrollView) findViewById(R.id.intro_scroll)).scrollTo(0, 0);
+        title.setText(TITLES[step]);
+        body.setText(BODIES[step]);
+        stepLabel.setText(getString(R.string.tutorial_step, step + 1, TITLES.length));
+        image.setImageResource(IMAGES[step]);
+        previous.setVisibility(step == 0 ? View.INVISIBLE : View.VISIBLE);
+        next.setText(step == TITLES.length - 1 ? R.string.tutorial_done : R.string.tutorial_next);
     }
 
     @Override
-    public void onSkipPressed(Fragment currentFragment) {
-        super.onSkipPressed(currentFragment);
-        // Do something when users tap on Skip button.
-        finish();
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt(STATE_STEP, step);
+        super.onSaveInstanceState(outState);
     }
-
-    @Override
-    public void onDonePressed(Fragment currentFragment) {
-        super.onDonePressed(currentFragment);
-        // Do something when users tap on Done button.
-        finish();
-    }
-
-    @Override
-    public void onSlideChanged(@Nullable Fragment oldFragment, @Nullable Fragment newFragment) {
-        super.onSlideChanged(oldFragment, newFragment);
-        // Do something when the slide changes.
-    }
-
-
 }

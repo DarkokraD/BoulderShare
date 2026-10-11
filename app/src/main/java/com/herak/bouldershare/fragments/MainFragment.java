@@ -2,186 +2,134 @@ package com.herak.bouldershare.fragments;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.Toast;
 
+import androidx.fragment.app.Fragment;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
 import com.herak.bouldershare.adapters.BoulderGridViewAdapter;
 import com.herak.bouldershare.classes.BoulderProblemInfo;
-import com.herak.bouldershare.classes.Hold;
 import com.herak.bouldershare.data.BoulderContract;
-import com.herak.bouldershare.enums.HoldType;
+import com.herak.bouldershare.data.BoulderRepository;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-
-/**
- * A placeholder fragment containing a simple view.
- */
 public class MainFragment extends Fragment {
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private GridView grid;
+    private BoulderGridViewAdapter adapter;
+    private int generation;
+    private boolean opening;
 
-    public MainFragment() {
-    }
-
-    BoulderGridViewAdapter mBoulderGridViewAdapter;
-    Context mContext = getContext();
-    MainActivity mainActivity = (MainActivity) getActivity();
-    GridView mBoulderGrid;
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        ((MainActivity) getActivity()).checkAndGetWritePermission();
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-
-
-
-        View view = inflater.inflate(R.layout.fragment_main, container, false);
+    @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         setHasOptionsMenu(true);
-        mBoulderGrid = (GridView) view.findViewById(R.id.gridBoulderProblems);
-//        TextView textViewInstructions = (TextView) view.findViewById(textViewInstructions);
-//        textViewInstructions.setText("Instructions:\n" +
-//                "\n" +
-//                "- Select a photo of a climbing wall from the gallery or take a photo\n" +
-//                "- Add a hold by tapping on the photo\n" +
-//                "- Remove a hold by taping inside of an existing hold\n" +
-//                "- Change the hold type by double tapping inside of an existing hold (next hold will be of the same type)\n" +
-//                "- Resize the hold with a pinching gesture inside an existing hold\n" +
-//                "- Move the hold by pressing inside the hold for 200ms and moving the finger around\n" +
-//                "- Click the information icon and fill in the information in the dialog to add some information on the boulder problem\n" +
-//                "- Once you're done share the image with your climbing buddies by clicking the Share icon");
-
-        mBoulderGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
-                Cursor cursor = ((BoulderGridViewAdapter) parent.getAdapter()).getCursor();
-                cursor.moveToPosition(position);
-                BoulderProblemInfo boulder = new BoulderProblemInfo();
-                boulder.setId(cursor.getLong(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID)));
-                boulder.setAuthor(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR)));
-                boulder.setName(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME)));
-                boulder.setComment(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT)));
-                boulder.setGrade(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE)));
-                boulder.setInputBitmapUri(Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI))));
-                boulder.setFinalBitmapUri(Uri.parse(cursor.getString(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI))));
-
-                Cursor holdsCursor = getContext().getContentResolver().query(BoulderContract.HoldsEntry.buildHoldsOfBoulderProblem(boulder.getId()), null, null, null, null);
-                List<Hold> holds = new ArrayList<Hold>();
-                while(holdsCursor.moveToNext()){
-                    Hold hold = new Hold(
-                            holdsCursor.getFloat(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_COORD_X)),
-                            holdsCursor.getFloat(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_COORD_Y))
-                    );
-                    hold.setCircleRadius(holdsCursor.getInt(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_CIRCLE_RADIUS)));
-                    hold.setType(HoldType.valueOf(holdsCursor.getString(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_HOLD_TYPE))));
-                    hold.setId(holdsCursor.getLong(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry._ID)));
-                    hold.setBoulderId(holdsCursor.getLong(holdsCursor.getColumnIndex(BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID)));
-                    holds.add(hold);
-                }
-                boulder.setHolds(holds);
-
-                MainActivity mainActivity = (MainActivity) getActivity();
-                mainActivity.setmBoulderProblemInfo(boulder);
-                mainActivity.changeFragment(MainActivity.FRAGMENT_TYPE.BOULDER_FRAGMENT);
-
-            }
+        View root = inflater.inflate(R.layout.fragment_main, container, false);
+        grid = root.findViewById(R.id.gridBoulderProblems);
+        grid.setEmptyView(root.findViewById(R.id.empty_state));
+        adapter = new BoulderGridViewAdapter(requireContext(), null);
+        grid.setAdapter(adapter);
+        grid.setOnItemClickListener((parent, view, position, id) -> open(id));
+        grid.setOnItemLongClickListener((parent, view, position, id) -> {
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.delete_problem_title).setMessage(R.string.delete_problem_message)
+                    .setNegativeButton(R.string.cancel, null)
+                    .setPositiveButton(R.string.delete, (dialog, which) -> delete(id)).show();
+            return true;
         });
-
-        mBoulderGrid.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                BoulderGridViewAdapter adapter = (BoulderGridViewAdapter) parent.getAdapter();
-                Cursor cursor = adapter.getCursor();
-                cursor.moveToPosition(position);
-                long boulderId = cursor.getLong(cursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID));
-                if(boulderId > 0){
-                    //Delete boulder problem and all related holds
-                    getContext().getContentResolver().delete(BoulderContract.HoldsEntry.CONTENT_URI,
-                            BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID + " = ?",
-                            new String[]{Long.toString(boulderId)});
-
-                    getContext().getContentResolver().delete(BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
-                            BoulderContract.BoulderProblemInfoEntry._ID + " = ?",
-                            new String[]{Long.toString(boulderId)});
-
-                    cursor = mContext.getContentResolver().query(
-                            BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
-                            null,
-                            null,
-                            null,
-                            BoulderContract.BoulderProblemInfoEntry._ID + " DESC");;
-
-                    adapter.changeCursor(cursor);
-                    adapter.notifyDataSetChanged();
-
-                    Toast.makeText(getContext(), R.string.problem_deleted, Toast.LENGTH_LONG).show();
-                    return true;
-                }
-
-                return false;
-            }
-        });
-
-        return view;
+        return root;
     }
 
-    @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
+    private void open(long id) {
+        if (opening) return;
+        opening = true;
+        int token = generation;
+        Context context = requireContext().getApplicationContext();
+        executor.execute(() -> {
+            try {
+                BoulderProblemInfo info = BoulderRepository.load(context, id);
+                main.post(() -> {
+                    if (!valid(token)) return;
+                    opening = false;
+                    if (info == null) { refresh(); return; }
+                    MainActivity activity = (MainActivity) requireActivity();
+                    activity.setmBoulderProblemInfo(info);
+                    activity.setHasUnsavedChanges(false);
+                    activity.changeFragment(MainActivity.FRAGMENT_TYPE.BOULDER_FRAGMENT);
+                });
+            } catch (RuntimeException error) {
+                main.post(() -> {
+                    if (!valid(token)) return;
+                    opening = false;
+                    Toast.makeText(requireContext(), R.string.image_load_failed, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void delete(long id) {
+        Context context = requireContext().getApplicationContext();
+        int token = generation;
+        executor.execute(() -> {
+            try {
+                context.getContentResolver().delete(BoulderContract.BoulderProblemInfoEntry.buildBoulderProblemInfoUri(id), null, null);
+                main.post(() -> {
+                    if (!valid(token)) return;
+                    Toast.makeText(requireContext(), R.string.problem_deleted, Toast.LENGTH_SHORT).show();
+                    refresh();
+                });
+            } catch (RuntimeException error) {
+                main.post(() -> {
+                    if (valid(token)) Toast.makeText(requireContext(), R.string.problem_delete_failed, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void refresh() {
+        int token = ++generation;
+        Context context = requireContext().getApplicationContext();
+        executor.execute(() -> {
+            try {
+                Cursor cursor = context.getContentResolver().query(BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
+                        null, null, null, "_id DESC");
+                main.post(() -> {
+                    if (!valid(token)) { if (cursor != null) cursor.close(); return; }
+                    adapter.changeCursor(cursor);
+                });
+            } catch (RuntimeException error) {
+                main.post(() -> {
+                    if (valid(token)) Toast.makeText(requireContext(), R.string.library_load_failed, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private boolean valid(int token) { return token == generation && isAdded() && grid != null; }
+    @Override public void onStart() { super.onStart(); refresh(); }
+    @Override public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         menu.findItem(R.id.action_info).setVisible(false);
         menu.findItem(R.id.action_save).setVisible(false);
         menu.findItem(R.id.action_share).setVisible(false);
     }
-
-
-
-    @Override
-    public void onStart() {
-        super.onStart();
-
-        mContext = getContext();
-        Cursor boulderCursor = mContext.getContentResolver().query(
-                BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
-                null,
-                null,
-                null,
-                BoulderContract.BoulderProblemInfoEntry._ID + " DESC");
-
-        mBoulderGridViewAdapter = new BoulderGridViewAdapter(mContext, boulderCursor);
-        mBoulderGrid.setAdapter(mBoulderGridViewAdapter);
-
-        getActivity().findViewById(R.id.fabCamera).setVisibility(View.VISIBLE);
-        getActivity().findViewById(R.id.fabGallery).setVisibility(View.VISIBLE);
-//        ((TextView) getActivity().findViewById(textViewInstructions)).setText("Id of first boulder:" + id + "\n" +
-//                "Instructions:\n" +
-//                "\n" +
-//                "- Select a photo of a climbing wall from the gallery or take a photo\n" +
-//                "- Add a hold by tapping on the photo\n" +
-//                "- Remove a hold by taping inside of an existing hold\n" +
-//                "- Change the hold type by double tapping inside of an existing hold (next hold will be of the same type)\n" +
-//                "- Resize the hold with a pinching gesture inside an existing hold\n" +
-//                "- Move the hold by pressing inside the hold for 200ms and moving the finger around\n" +
-//                "- Click the information icon and fill in the information in the dialog to add some information on the boulder problem\n" +
-//                "- Once you're done share the image with your climbing buddies by clicking the Share icon");
-//
+    @Override public void onDestroyView() {
+        ++generation;
+        opening = false;
+        if (adapter != null) adapter.changeCursor(null);
+        adapter = null; grid = null;
+        super.onDestroyView();
     }
-
-
+    @Override public void onDestroy() { executor.shutdown(); super.onDestroy(); }
 }

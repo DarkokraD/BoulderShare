@@ -1,21 +1,11 @@
 package com.herak.bouldershare.fragments;
 
-import android.content.ContentValues;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.FileProvider;
-import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -23,381 +13,245 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.slider.LabelFormatter;
+import com.google.android.material.slider.Slider;
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
 import com.herak.bouldershare.classes.BoulderProblemInfo;
 import com.herak.bouldershare.classes.BoulderProblemView;
+import com.herak.bouldershare.classes.ImageFiles;
 import com.herak.bouldershare.classes.Hold;
-import com.herak.bouldershare.data.BoulderContract;
+import com.herak.bouldershare.data.BoulderRepository;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.util.Objects;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static android.os.FileObserver.DELETE;
-
-/**
- * A placeholder fragment containing a simple view.
- */
+/** One save/export pipeline shared by Save and Share, retained across rotation. */
 public class BoulderFragment extends Fragment {
+    private BoulderProblemView editor;
+    private SaveModel saveModel;
+    private TextView gestureHint;
+    private MaterialButton fitPhotoButton, resizeHoldButton;
+    private AlertDialog sizeDialog;
 
-    Bitmap mBoulderBitmap;
-    Context mContext = getContext();
+    public boolean isBusy() { return saveModel != null && saveModel.busy; }
 
-
-    public BoulderFragment() {
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-
-        View view = inflater.inflate(R.layout.fragment_boulder, container, false);
+    @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         setHasOptionsMenu(true);
-
-        MainActivity mainActivity = (MainActivity) getActivity();
-        RelativeLayout relativeLayout = (RelativeLayout) view.findViewById(R.id.rlBoulderFragment);
-        relativeLayout.setGravity(Gravity.CENTER);
-        BoulderProblemView myView = new BoulderProblemView(mainActivity);
-        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
-        myView.setLayoutParams(layoutParams);
-        myView.setId(R.id.boulderProblemView);
-
-        mBoulderBitmap = mainActivity.getmBoulderBitmap();
-
-        myView.setMinimumHeight(relativeLayout.getHeight());
-        myView.setMinimumWidth(relativeLayout.getWidth());
-        myView.setLongClickable(true);
-
-
-        relativeLayout.addView(myView);
-
-        return view;
+        saveModel = new ViewModelProvider(this).get(SaveModel.class);
+        View root = inflater.inflate(R.layout.fragment_boulder, container, false);
+        editor = new BoulderProblemView(requireActivity());
+        editor.setId(R.id.boulderProblemView);
+        editor.setEnabled(!saveModel.busy);
+        ((RelativeLayout) root.findViewById(R.id.rlBoulderFragment)).addView(editor,
+                new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        gestureHint = root.findViewById(R.id.editor_gesture_hint);
+        fitPhotoButton = root.findViewById(R.id.action_fit_photo);
+        resizeHoldButton = root.findViewById(R.id.action_resize_hold);
+        fitPhotoButton.setOnClickListener(view -> {
+            editor.flushPendingSingleTap();
+            editor.cancelHoldResize();
+            editor.resetViewport();
+            updateEditorControls();
+        });
+        resizeHoldButton.setOnClickListener(view -> {
+            if (editor.isChoosingHoldToResize()) editor.cancelHoldResize();
+            else if (!editor.isImageReady()) {
+                Toast.makeText(requireContext(), R.string.image_loading, Toast.LENGTH_SHORT).show();
+            } else if (!editor.requestHoldResize()) {
+                Toast.makeText(requireContext(), R.string.add_hold_first, Toast.LENGTH_SHORT).show();
+            }
+            updateEditorControls();
+        });
+        editor.setOnHoldResizeRequestedListener(hold -> {
+            updateEditorControls();
+            showHoldSizeDialog(hold);
+        });
+        updateEditorControls();
+        return root;
     }
 
-    @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        menu.findItem(R.id.action_info).setVisible(true);
-        //menu.findItem(R.id.action_save).setVisible(true);
-        menu.findItem(R.id.action_share).setVisible(true);
+    @Override public void onViewCreated(View view, Bundle state) {
+        saveModel.result.observe(getViewLifecycleOwner(), result -> {
+            if (result == null) return;
+            MainActivity activity = (MainActivity) requireActivity();
+            BoulderProblemInfo current = activity.getmBoulderProblemInfo();
+            if (!Objects.equals(current == null ? null : current.getInputBitmapUri(), result.info.getInputBitmapUri())) {
+                saveModel.result.setValue(null);
+                return;
+            }
+            editor.setEnabled(!saveModel.busy);
+            updateEditorControls();
+            activity.invalidateOptionsMenu();
+            if (result.pending) return;
+            // Consume once: recreation must not launch the same chooser again.
+            saveModel.result.setValue(null);
+            if (result.saved) {
+                current.setId(result.info.getId());
+                current.setFinalBitmapUri(result.info.getFinalBitmapUri());
+                activity.setHasUnsavedChanges(false);
+                activity.setSaveIconVisibility(false);
+                Toast.makeText(activity, R.string.image_saved, Toast.LENGTH_SHORT).show();
+            }
+            if (result.error) {
+                Toast.makeText(activity, R.string.image_save_failed, Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (result.shareUri != null) {
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("image/jpeg");
+                share.putExtra(Intent.EXTRA_STREAM, result.shareUri);
+                share.setClipData(ClipData.newUri(activity.getContentResolver(), getString(R.string.share_image), result.shareUri));
+                share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(share, getString(R.string.share_image)));
+            }
+        });
     }
 
+    private void updateEditorControls() {
+        if (editor == null) return;
+        boolean choosing = editor.isChoosingHoldToResize();
+        gestureHint.setText(choosing ? R.string.editor_resize_hint : R.string.editor_gesture_hint);
+        resizeHoldButton.setText(choosing ? R.string.cancel : R.string.resize_hold);
+        fitPhotoButton.setEnabled(!saveModel.busy);
+        resizeHoldButton.setEnabled(!saveModel.busy);
+    }
 
+    private void showHoldSizeDialog(Hold hold) {
+        if (editor == null || saveModel.busy) return;
+        View content = getLayoutInflater().inflate(R.layout.dialog_hold_size, null);
+        Slider slider = content.findViewById(R.id.hold_size);
+        int largestRadius = Math.max(2, Math.round(editor.getBoulderProblemInfo().getReferenceHeight() / 3f));
+        slider.setValueFrom(0);
+        slider.setValueTo(100);
+        slider.setLabelBehavior(LabelFormatter.LABEL_GONE);
+        // Give small markers more slider travel, while leaving an untouched size exact.
+        int originalRadius = hold.getCircleRadius();
+        float initialValue = Math.max(0, Math.min(100,
+                (float) Math.sqrt(Math.max(0, (originalRadius - 1f) / (largestRadius - 1))) * 100));
+        slider.setValue(initialValue);
+        sizeDialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.hold_size)
+                .setView(content)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.apply, (dialog, which) -> {
+                    if (editor != null) {
+                        float fraction = slider.getValue() / 100f;
+                        int radius = slider.getValue() == initialValue ? originalRadius
+                                : Math.round(1 + fraction * fraction * (largestRadius - 1));
+                        editor.resizeHold(hold, radius);
+                    }
+                }).create();
+        sizeDialog.setOnDismissListener(dialog -> {
+            sizeDialog = null;
+            if (editor != null) {
+                editor.cancelHoldResize();
+                updateEditorControls();
+            }
+        });
+        sizeDialog.show();
+    }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        final MainActivity mainActivity = (MainActivity) getActivity();
+    @Override public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        MainActivity activity = (MainActivity) requireActivity();
+        menu.findItem(R.id.action_info).setVisible(true).setEnabled(!saveModel.busy);
+        menu.findItem(R.id.action_share).setVisible(true).setEnabled(!saveModel.busy);
+        menu.findItem(R.id.action_save).setVisible(activity.isHasUnsavedChanges()).setEnabled(!saveModel.busy);
+    }
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_info) {
-            DialogFragment dialog = new InfoFragment();
-            dialog.show(mainActivity.getSupportFragmentManager(), "Settings Fragment");
-
-        }else if (id == R.id.action_save) {
-           /*
-            * Saving logic
-            */
-            saveImageFile(mainActivity);
-
+    @Override public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_info) {
+            if (!saveModel.busy) new InfoFragment().show(getParentFragmentManager(), "route_info");
             return true;
         }
-        /*
-         * Sharing logic
-          * */
-        else if (id == R.id.action_share) {
-
-            if(!mainActivity.isHasUnsavedChanges()){
-                //if no unsaved changes exist just share the latest finalBitmapUri
-                BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
-                final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
-
-                Uri contentUri = boulderProblemInfo.getFinalBitmapUri();
-
-                if (contentUri != null) {
-                    Intent shareIntent = new Intent();
-                    shareIntent.setAction(Intent.ACTION_SEND);
-                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
-                    shareIntent.setDataAndType(contentUri, getContext().getContentResolver().getType(contentUri));
-                    shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
-                    startActivity(Intent.createChooser(shareIntent, "Choose an app"));
-                }
-
-                return true;
-
-            }else {
-                //if there are unsaved changes, store and changes, then initiate sharing
-
-                mainActivity.checkAndGetWritePermission();
-
-                final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
-
-                BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
-                Canvas canvas = new Canvas(resultBitmap);
-                canvas = bpView.drawOnCustomCanvas(canvas);
-
-
-                final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
-
-
-                final Context context = mainActivity;
-                //mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
-
-                AsyncTask fileTask = new AsyncTask() {
-                    @Override
-                    protected Object doInBackground(Object[] objects) {
-                        Object result = null;
-                        File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
-
-                        if (!directory.exists()) {
-                            directory.mkdirs();
-                        }
-                        File pictureFile;
-                        if (boulderProblemInfo.getFinalBitmapUri() != null) {
-                            pictureFile = new File(boulderProblemInfo.getFinalBitmapUri().getPath());
-                            if (pictureFile.exists())
-                                pictureFile.delete();
-                        }
-
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                        String name = "boulder_" + timeStamp + ".jpg";
-                        pictureFile = new File(directory, name);
-
-                        try {
-                            if (!pictureFile.exists())
-                                pictureFile.createNewFile();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        try {
-                            FileOutputStream out = new FileOutputStream(pictureFile);
-                            resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-                            out.close();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                        result = "Image saved";
-                        // Tell the media scanner about the new file so that it is
-                        // immediately available to the user.
-                        MediaScannerConnection.scanFile(mainActivity, new String[]{pictureFile.toString()}, null,
-                                new MediaScannerConnection.OnScanCompletedListener() {
-                                    public void onScanCompleted(String path, Uri uri) {
-                                        Log.i("ExternalStorage", "Scanned " + path + ":");
-                                        Log.i("ExternalStorage", "-> uri=" + uri);
-                                    }
-                                });
-
-                        Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", pictureFile);
-
-
-                        if (contentUri != null) {
-                            boulderProblemInfo.setFinalBitmapUri(contentUri);
-                            Intent shareIntent = new Intent();
-                            shareIntent.setAction(Intent.ACTION_SEND);
-                            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
-                            shareIntent.setDataAndType(contentUri, context.getContentResolver().getType(contentUri));
-                            shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
-                            startActivity(Intent.createChooser(shareIntent, "Choose an app"));
-                        }
-                        return result;
-                    }
-
-                    @Override
-                    protected void onPostExecute(Object o) {
-                        if (o != null) {
-                            Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
-                        }
-                        addOrUpdateBoulderProblem(boulderProblemInfo);
-                        mainActivity.setHasUnsavedChanges(false);
-                        mainActivity.setSaveIconVisibility(false);
-                        super.onPostExecute(o);
-                    }
-                };
-                fileTask.execute();
-                // save bitmap to cache directory
-
-//            try {
-//
-//                File cachePath = new File(context.getExternalFilesDir("BoulderShare Problem"), "images");
-//                cachePath.mkdirs(); // don't forget to make the directory
-//                FileOutputStream stream = new FileOutputStream(cachePath + "/image.png"); // overwrites this image every time
-//                mBoulderBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-//                stream.close();
-//
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//
-//            File imagePath = new File(context.getCacheDir(), "images");
-//            File newFile = new File(imagePath, "image.png");
-//            Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", newFile);
-//
-//            if (contentUri != null) {
-//                Intent shareIntent = new Intent();
-//                shareIntent.setAction(Intent.ACTION_SEND);
-//                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // temp permission for receiving app to read this file
-//                shareIntent.setDataAndType(contentUri, getContentResolver().getType(contentUri));
-//                shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
-//                startActivity(Intent.createChooser(shareIntent, "Choose an app"));
-//            }
+        if (item.getItemId() == R.id.action_save || item.getItemId() == R.id.action_share) {
+            if (saveModel.busy) return true;
+            if (!editor.isImageReady()) {
+                Toast.makeText(requireContext(), R.string.image_loading, Toast.LENGTH_SHORT).show();
                 return true;
             }
+            MainActivity activity = (MainActivity) requireActivity();
+            editor.flushPendingSingleTap();
+            editor.setEnabled(false);
+            BoulderProblemInfo info = BoulderProblemInfo.fromBundle(editor.getBoulderProblemInfo().toBundle());
+            boolean needsSave = activity.isHasUnsavedChanges() || info.getFinalBitmapUri() == null || info.getId() == null;
+            saveModel.start(requireContext().getApplicationContext(), info, activity.getmBoulderBitmap(),
+                    needsSave, item.getItemId() == R.id.action_share);
+            return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
-    private void saveImageFile(final MainActivity mainActivity) {
-        mainActivity.checkAndGetWritePermission();
-
-        final Bitmap resultBitmap = mBoulderBitmap.copy(Bitmap.Config.ARGB_8888, true);
-
-        BoulderProblemView bpView = (BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView);
-        Canvas canvas = new Canvas(resultBitmap);
-        bpView.drawOnCustomCanvas(canvas);
-
-        final BoulderProblemInfo boulderProblemInfo = bpView.getBoulderProblemInfo();
-
-
-        final Context context = mainActivity;
-        //mBoulderBitmap = ((BoulderProblemView) mainActivity.findViewById(R.id.boulderProblemView)).getBitmap();
-
-        AsyncTask fileTask = new AsyncTask() {
-            @Override
-            protected Object doInBackground(Object[] objects) {
-                Object result = null;
-                File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Output");
-
-                if (!directory.exists()) {
-                    directory.mkdirs();
-                }
-                File pictureFile;
-                if(boulderProblemInfo.getFinalBitmapUri() != null){
-                    pictureFile = new File(boulderProblemInfo.getFinalBitmapUri().getPath());
-                    if(pictureFile.exists())
-                        pictureFile.delete();
-                }
-
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                String name = "boulder_" + timeStamp + ".jpg";
-                pictureFile = new File(directory, name);
-
-                try {
-                    if(!pictureFile.exists())
-                        pictureFile.createNewFile();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    FileOutputStream out = new FileOutputStream(pictureFile);
-                    resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-                    out.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                result = "Image saved";
-                // Tell the media scanner about the new file so that it is
-                // immediately available to the user.
-                MediaScannerConnection.scanFile(mainActivity, new String[] { pictureFile.toString() }, null,
-                        new MediaScannerConnection.OnScanCompletedListener() {
-                            public void onScanCompleted(String path, Uri uri) {
-                                Log.i("ExternalStorage", "Scanned " + path + ":");
-                                Log.i("ExternalStorage", "-> uri=" + uri);
-                            }
-                        });
-
-                Uri contentUri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", pictureFile);
-
-
-                if (contentUri != null) {
-                    boulderProblemInfo.setFinalBitmapUri(contentUri);
-                }
-                return result;
-            }
-
-            @Override
-            protected void onPostExecute(Object o) {
-                if(o != null){
-                    Toast.makeText(context, R.string.image_saved, Toast.LENGTH_LONG).show();
-                }
-                addOrUpdateBoulderProblem(boulderProblemInfo);
-                mainActivity.setHasUnsavedChanges(false);
-                mainActivity.setSaveIconVisibility(false);
-                super.onPostExecute(o);
-            }
-        };
-        fileTask.execute();
+    /** Kept for existing callers; persistence belongs on an IO executor. */
+    public long addOrUpdateBoulderProblem(BoulderProblemInfo info) {
+        return BoulderRepository.save(requireContext().getApplicationContext(), info);
     }
 
-    public long addOrUpdateBoulderProblem(BoulderProblemInfo info){
-//        BoulderProvider boulderProvider = new BoulderProvider();
-        long boulderProblemId;
-        mContext = getContext();
-        Cursor boulderCursor = null;
-        if(info.getId() != null) {
-            boulderCursor = mContext.getContentResolver().query(
-                    BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
-                    new String[]{BoulderContract.BoulderProblemInfoEntry._ID},
-                    BoulderContract.BoulderProblemInfoEntry._ID + " = ?",
-                    new String[]{Long.toString(info.getId())},
-                    null);
+    @Override public void onDestroyView() {
+        if (sizeDialog != null) sizeDialog.dismiss();
+        editor = null;
+        gestureHint = null;
+        fitPhotoButton = resizeHoldButton = null;
+        super.onDestroyView();
+    }
+
+    public static class SaveModel extends ViewModel {
+        private final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final MutableLiveData<SaveResult> result = new MutableLiveData<>();
+        volatile boolean busy;
+
+        void start(Context context, BoulderProblemInfo info, Bitmap bitmap, boolean needsSave, boolean share) {
+            if (busy) return;
+            busy = true;
+            result.setValue(new SaveResult(info, true, false, false, null));
+            executor.execute(() -> {
+                boolean saved = false;
+                try {
+                    Uri shareUri = null;
+                    boolean regenerate = needsSave;
+                    if (share && !needsSave) {
+                        try { shareUri = ImageFiles.shareableUri(context, info.getFinalBitmapUri()); }
+                        catch (IOException | SecurityException unavailableExport) { regenerate = true; }
+                    }
+                    if (regenerate) {
+                        Bitmap export = BoulderProblemView.render(bitmap, info);
+                        try { info.setFinalBitmapUri(ImageFiles.export(context, export)); }
+                        finally { export.recycle(); }
+                        BoulderRepository.save(context, info);
+                        saved = true;
+                    }
+                    if (share && shareUri == null) shareUri = ImageFiles.shareableUri(context, info.getFinalBitmapUri());
+                    busy = false;
+                    result.postValue(new SaveResult(info, false, false, saved, shareUri));
+                } catch (Exception error) {
+                    busy = false;
+                    result.postValue(new SaveResult(info, false, true, saved, null));
+                }
+            });
         }
 
-        ContentValues values = new ContentValues();
+        @Override protected void onCleared() { executor.shutdown(); }
+    }
 
-        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_AUTHOR, info.getAuthor());
-        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_COMMENT, info.getComment());
-        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_GRADE, info.getGrade());
-        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_NAME, info.getName());
-        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_INPUTBITMAPURI, info.getInputBitmapUri().toString());
-        values.put(BoulderContract.BoulderProblemInfoEntry.COLUMN_FINALBITMAPURI, info.getFinalBitmapUri().toString());
-
-        if (boulderCursor != null && boulderCursor.moveToFirst()) {
-            //update existing
-            int boulderIdIndex = boulderCursor.getColumnIndex(BoulderContract.BoulderProblemInfoEntry._ID);
-            boulderProblemId = boulderCursor.getLong(boulderIdIndex);
-            //Update BoulderProblemInfo
-            mContext.getContentResolver().update(
-                    BoulderContract.BoulderProblemInfoEntry.CONTENT_URI,
-                    values,
-                    BoulderContract.BoulderProblemInfoEntry._ID + " = ?",
-                    new String[]{Long.toString(info.getId())});
-            //DELETE existing holds for this boulderProblem
-            mContext.getContentResolver().delete(BoulderContract.HoldsEntry.CONTENT_URI,
-                    BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID + " = ?",
-                    new String[]{Long.toString(info.getId())});
-
-        } else {
-            //insert new boulderProblem
-            Uri returnUri = mContext.getContentResolver().insert(BoulderContract.BoulderProblemInfoEntry.CONTENT_URI, values);
-            boulderProblemId = Long.parseLong(BoulderContract.HoldsEntry.getBoulderProblemIdFromUri(returnUri));
-            info.setId(boulderProblemId);
+    static class SaveResult {
+        final BoulderProblemInfo info;
+        final boolean pending, error, saved;
+        final Uri shareUri;
+        SaveResult(BoulderProblemInfo info, boolean pending, boolean error, boolean saved, Uri shareUri) {
+            this.info = info; this.pending = pending; this.error = error; this.saved = saved; this.shareUri = shareUri;
         }
-
-        ContentValues[] valuesArray = new ContentValues[info.getHolds().size()];
-        for(Hold hold:info.getHolds()){
-            ContentValues holdValues = new ContentValues();
-            holdValues.put(BoulderContract.HoldsEntry.COLUMN_BOULDER_PROBLEM_ID, info.getId());
-            holdValues.put(BoulderContract.HoldsEntry.COLUMN_CIRCLE_RADIUS, hold.getCircleRadius());
-            holdValues.put(BoulderContract.HoldsEntry.COLUMN_COORD_X, hold.getX());
-            holdValues.put(BoulderContract.HoldsEntry.COLUMN_COORD_Y, hold.getY());
-            holdValues.put(BoulderContract.HoldsEntry.COLUMN_HOLD_TYPE, hold.getType().toString());
-            valuesArray[info.getHolds().indexOf(hold)] = holdValues;
-        }
-
-        //Bulk insert holds for boulderProblem
-        int rowsInserted = mContext.getContentResolver().bulkInsert(BoulderContract.HoldsEntry.CONTENT_URI, valuesArray);
-
-        return boulderProblemId;
     }
 }

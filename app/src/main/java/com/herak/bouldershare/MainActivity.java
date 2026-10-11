@@ -1,551 +1,326 @@
 package com.herak.bouldershare;
 
-import android.Manifest;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.content.Context;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
-import android.preference.PreferenceManager;
-import android.provider.MediaStore;
-import android.support.design.widget.FloatingActionButton;
-import android.support.media.ExifInterface;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.FileProvider;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.herak.bouldershare.classes.BoulderProblemInfo;
+import com.herak.bouldershare.classes.BoulderProblemView;
+import com.herak.bouldershare.classes.ImageFiles;
 import com.herak.bouldershare.fragments.BoulderFragment;
 import com.herak.bouldershare.fragments.InfoFragment;
 import com.herak.bouldershare.fragments.MainFragment;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static android.R.attr.rotation;
-
-public class MainActivity extends AppCompatActivity
-    implements InfoFragment.OnInfoStoredListener {
-
+public class MainActivity extends AppCompatActivity implements InfoFragment.OnInfoStoredListener {
     public static final String PREFS_NAME = "BoulderSharePrefs";
-    static final int REQUEST_IMAGE_CAPTURE = 1;
-    static final int RESULT_LOAD_IMG = 2;
-    static final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 3;
+    public static final String MAIN_FRAGMENT_TAG = "MAIN_FRAGMENT_TAG";
+    public static final String BOULDER_FRAGMENT_TAG = "BOULDER_FRAGMENT_TAG";
+    public enum FRAGMENT_TYPE { MAIN_FRAGMENT, BOULDER_FRAGMENT, SETTINGS_FRAGMENT }
 
-    String mCurrentPhotoPath;
-    private Bitmap mBoulderBitmap;
-
-    private boolean hasUnsavedChanges = false;
-
-    private FRAGMENT_TYPE nextFragment = null;
+    private EditorState state;
     private Menu menu;
+    private MaterialToolbar toolbar;
 
-    public void setNextFragment(FRAGMENT_TYPE nextFragment) {
-        this.nextFragment = nextFragment;
-    }
-
-    private BoulderProblemInfo mBoulderProblemInfo;
-
-    public void setmBoulderBitmap(Bitmap mBoulderBitmap) {
-        this.mBoulderBitmap = mBoulderBitmap;
-    }
-
-    public BoulderProblemInfo getmBoulderProblemInfo() {
-        return mBoulderProblemInfo;
-    }
-
-    public void setmBoulderProblemInfo(BoulderProblemInfo mBoulderProblemInfo) {
-        this.mBoulderProblemInfo = mBoulderProblemInfo;
-    }
-
-
-
-    private Uri mBoulderBitmapUri;
-
-    public Bitmap getmBoulderBitmap() {
-        return mBoulderBitmap;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            File file = new File(mCurrentPhotoPath);
-            final Uri uri = Uri.fromFile(file);
-            mBoulderBitmap = BitmapFactory.decodeFile(uri.getPath());            //MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
-            final Context context = this;
-
-            checkAndGetWritePermission();
-
-            AsyncTask fileTask = new AsyncTask() {
-                @Override
-                protected Object doInBackground(Object[] objects) {
-                    File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare Input");
-
-                    if (!directory.exists()) {
-                        directory.mkdirs();
-                    }
-                    long time = System.currentTimeMillis() / 1000;
-                    String name = "boulder_"+ time +".jpg";
-                    File pictureFile = new File(directory, name);
-                    try {
-                        pictureFile.createNewFile();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        FileOutputStream out = new FileOutputStream(pictureFile);
-                        ExifInterface exif = new ExifInterface(pictureFile.getAbsolutePath());
-                        int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
-                        int rotationInDegrees = exifToDegrees(orientation);
-                        Matrix matrix = new Matrix();
-                        if (rotation != 0f) {
-                            matrix.preRotate(rotationInDegrees);
-                        }
-
-                        mBoulderBitmap = Bitmap.createBitmap(mBoulderBitmap, 0, 0, mBoulderBitmap.getWidth(), mBoulderBitmap.getHeight(), matrix, true);
-                        mBoulderBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-                        out.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-                    // Tell the media scanner about the new file so that it is
-                    // immediately available to the user.
-                    MediaScannerConnection.scanFile(context, new String[] { pictureFile.toString() }, null,
-                            new MediaScannerConnection.OnScanCompletedListener() {
-                                public void onScanCompleted(String path, Uri uri) {
-                                    Log.i("ExternalStorage", "Scanned " + path + ":");
-                                    Log.i("ExternalStorage", "-> uri=" + uri);
-                                }
-                            });
-
-                    mBoulderProblemInfo = new BoulderProblemInfo();
-                    mBoulderProblemInfo.setInputBitmapUri(Uri.fromFile(pictureFile));
-                    mBoulderBitmapUri = Uri.fromFile(pictureFile);
-
-                    return null;
-                }
-
-                @Override
-                protected void onPostExecute(Object o) {
-                    super.onPostExecute(o);
-                    MainActivity mainActivity = (MainActivity) context;
-
-                    mainActivity.changeFragment(FRAGMENT_TYPE.BOULDER_FRAGMENT);
-                }
-            };
-
-            fileTask.execute();
-
-
-        }else if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK) {
-//            try {
-                final Uri imageUri = data.getData();
-                mBoulderBitmapUri = imageUri;
-//                InputStream imageStream = getContentResolver().openInputStream(imageUri);
-//                final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
-//                try {
-//                    mBoulderBitmap = modifyOrientation(selectedImage, imageStream);
-//                    mBoulderBitmap = selectedImage;
-                    nextFragment = FRAGMENT_TYPE.BOULDER_FRAGMENT;
-                    mBoulderProblemInfo = new BoulderProblemInfo();
-                    mBoulderProblemInfo.setInputBitmapUri(imageUri);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                    Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
-//                }
-//            } catch (FileNotFoundException e) {
-//                e.printStackTrace();
-//                Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
-//            }
-
-        }else {
-            Toast.makeText(this, "You haven't picked an image",Toast.LENGTH_LONG).show();
-        }
-    }
-
-    public static Bitmap modifyOrientation(Bitmap bitmap, InputStream imageStream) throws IOException {
-
-        ExifInterface ei = new ExifInterface(imageStream);
-        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-
-        Bitmap retBitmap;
-
-        switch (orientation) {
-            case ExifInterface.ORIENTATION_ROTATE_90:
-                retBitmap = rotate(bitmap, 90);
-                break;
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                retBitmap = rotate(bitmap, 180);
-                break;
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                retBitmap = rotate(bitmap, 270);
-                break;
-            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
-                retBitmap = flip(bitmap, true, false);
-                break;
-            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
-                retBitmap = flip(bitmap, false, true);
-                break;
-            default:
-                retBitmap = rotate(bitmap, 0);
-        }
-
-        int rotateBecauseOfWidthHeightRatio = 0;
-        if(retBitmap.getWidth() > retBitmap.getHeight())
-            rotateBecauseOfWidthHeightRatio = 90;
-        if(rotateBecauseOfWidthHeightRatio != 0){
-            retBitmap = rotate(retBitmap, rotateBecauseOfWidthHeightRatio);
-        }
-
-        return retBitmap;
-    }
-
-    public static Bitmap rotate(Bitmap bitmap, float degrees) {
-        Matrix matrix = new Matrix();
-        matrix.postRotate(degrees);
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-    }
-
-    public static Bitmap flip(Bitmap bitmap, boolean horizontal, boolean vertical) {
-        Matrix matrix = new Matrix();
-        matrix.preScale(horizontal ? -1 : 1, vertical ? -1 : 1);
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-    }
-
-    //Create an intent to take a picture, launch the appropriate activity and retrieve the
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                // Error occurred while creating the File
-                System.err.println(ex.getMessage());
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.herak.bouldershare.fileprovider",
-                        photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            }
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        Fragment f = getSupportFragmentManager().findFragmentById(R.id.flayoutMainActivity);
-        if (f instanceof MainFragment) {
-            // Don't remove the main fragment
-            finish();
-        }else{
-            super.onBackPressed();
-        }
-    }
-
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-
-        // Save a file: path for use with ACTION_VIEW intents
-        mCurrentPhotoPath = image.getAbsolutePath();
-        return image;
-    }
-
-    private static int exifToDegrees(int exifOrientation) {
-        if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) { return 90; }
-        else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {  return 180; }
-        else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {  return 270; }
-        return 0;
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (nextFragment != null){
-            changeFragment(nextFragment);
-            nextFragment = null;
-        }
-    }
+    private final ActivityResultLauncher<PickVisualMediaRequest> photoPicker =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+                if (uri != null) importPhoto(uri);
+                else state.relinkProblem = null;
+            });
+    private final ActivityResultLauncher<Uri> camera =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                Uri uri = state.cameraUri;
+                if (Boolean.TRUE.equals(success) && uri != null) importPhoto(uri);
+                state.cameraUri = null;
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        state = new ViewModelProvider(this).get(EditorState.class);
+        if (savedInstanceState != null && state.problem == null) {
+            Bundle problem = savedInstanceState.getBundle("problem");
+            if (problem != null) state.problem = BoulderProblemInfo.fromBundle(problem);
+            state.dirty = savedInstanceState.getBoolean("dirty");
+            String cameraUri = savedInstanceState.getString("camera_uri");
+            if (cameraUri != null) state.cameraUri = Uri.parse(cameraUri);
+            state.navigateToEditor = savedInstanceState.getBoolean("navigate_to_editor");
+            state.relinkProblem = savedInstanceState.getBundle("relink_problem");
+        }
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-
+        View root = findViewById(R.id.main_root);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(root);
+        toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        toolbar.setNavigationOnClickListener(view -> getOnBackPressedDispatcher().onBackPressed());
+        findViewById(R.id.fabCamera).setOnClickListener(view -> takePhoto());
+        findViewById(R.id.fabGallery).setOnClickListener(view -> photoPicker.launch(
+                new PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
 
-        // To get this out of the way
-        checkAndGetWritePermission();
-
-        FloatingActionButton fabCamera = (FloatingActionButton) findViewById(R.id.fabCamera);
-        FloatingActionButton fabGallery = (FloatingActionButton) findViewById(R.id.fabGallery);
-        fabCamera.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dispatchTakePictureIntent();
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                flushPendingEditorTap();
+                Fragment current = getSupportFragmentManager().findFragmentById(R.id.flayoutMainActivity);
+                if (current instanceof BoulderFragment) {
+                    if (((BoulderFragment) current).isBusy()) {
+                        Toast.makeText(MainActivity.this, R.string.saving_progress, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (state.dirty) {
+                        new MaterialAlertDialogBuilder(MainActivity.this)
+                                .setTitle(R.string.unsaved_title)
+                                .setMessage(R.string.unsaved_message)
+                                .setNegativeButton(R.string.keep_editing, null)
+                                .setPositiveButton(R.string.discard, (dialog, which) ->
+                                        changeFragment(FRAGMENT_TYPE.MAIN_FRAGMENT)).show();
+                    } else changeFragment(FRAGMENT_TYPE.MAIN_FRAGMENT);
+                } else finish();
             }
         });
+        state.loading.observe(this, loading -> {
+            boolean busy = Boolean.TRUE.equals(loading);
+            findViewById(R.id.photo_progress).setVisibility(busy ? View.VISIBLE : View.GONE);
+            findViewById(R.id.fabCamera).setEnabled(!busy);
+            findViewById(R.id.fabGallery).setEnabled(!busy);
+        });
+        state.imported.observe(this, result -> {
+            if (result == null || result.consumed) return;
+            result.consumed = true;
+            state.loading.setValue(false);
+            if (result.problem == null) {
+                Toast.makeText(this, R.string.photo_load_error, Toast.LENGTH_LONG).show();
+                return;
+            }
+            setmBoulderProblemInfo(result.problem);
+            state.bitmap = result.bitmap;
+            state.dirty = true;
+            state.navigateToEditor = true;
+            if (!getSupportFragmentManager().isStateSaved()) openPendingEditor();
+        });
+        if (savedInstanceState == null) {
+            changeFragment(FRAGMENT_TYPE.MAIN_FRAGMENT);
+            runTutorialIfFirstRun();
+        } else updateChrome();
+    }
 
-        fabGallery.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
-                photoPickerIntent.setType("image/*");
-                startActivityForResult(photoPickerIntent, RESULT_LOAD_IMG);
+    @Override protected void onResumeFragments() {
+        super.onResumeFragments();
+        openPendingEditor();
+        updateChrome();
+    }
 
-                //TODO check if there is a way to open this specific folder for the user to pick from
-//                File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + "BoulderShare" + File.separator + "Input Photos");
-//                Uri uri = FileProvider.getUriForFile(context, "com.herak.bouldershare.fileprovider", directory);
-//                photoPickerIntent.setDataAndType(uri, "image/*");
+    private void openPendingEditor() {
+        if (state.navigateToEditor) {
+            state.navigateToEditor = false;
+            changeFragment(FRAGMENT_TYPE.BOULDER_FRAGMENT);
+        }
+    }
+
+    @Override protected void onSaveInstanceState(@NonNull Bundle outState) {
+        flushPendingEditorTap();
+        if (state.problem != null) outState.putBundle("problem", state.problem.toBundle());
+        outState.putBoolean("dirty", state.dirty);
+        outState.putBoolean("navigate_to_editor", state.navigateToEditor);
+        if (state.relinkProblem != null) outState.putBundle("relink_problem", state.relinkProblem);
+        if (state.cameraUri != null) outState.putString("camera_uri", state.cameraUri.toString());
+        super.onSaveInstanceState(outState);
+    }
+
+    private void flushPendingEditorTap() {
+        View editor = findViewById(R.id.boulderProblemView);
+        if (editor instanceof BoulderProblemView) ((BoulderProblemView) editor).flushPendingSingleTap();
+    }
+
+    private void takePhoto() {
+        try {
+            File file = ImageFiles.cameraFile(this);
+            state.cameraUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
+            camera.launch(state.cameraUri);
+        } catch (ActivityNotFoundException exception) {
+            state.cameraUri = null;
+            Toast.makeText(this, R.string.no_camera_app, Toast.LENGTH_LONG).show();
+        } catch (IOException | SecurityException exception) {
+            state.cameraUri = null;
+            Toast.makeText(this, R.string.photo_load_error, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void importPhoto(Uri uri) {
+        if (Boolean.TRUE.equals(state.loading.getValue())) return;
+        state.loading.setValue(true);
+        final android.content.Context context = getApplicationContext();
+        final EditorState model = state;
+        final Bundle relink = model.relinkProblem;
+        model.relinkProblem = null;
+        model.executor.execute(() -> {
+            Uri importedUri = null;
+            try {
+                importedUri = ImageFiles.importPhoto(context, uri);
+                Bitmap bitmap = ImageFiles.load(context, importedUri);
+                BoulderProblemInfo info = relink == null ? new BoulderProblemInfo() : BoulderProblemInfo.fromBundle(relink);
+                info.setInputBitmapUri(importedUri);
+                model.imported.postValue(new ImportResult(info, bitmap));
+            } catch (IOException | RuntimeException exception) {
+                if (importedUri != null && importedUri.getPath() != null) {
+                    new File(importedUri.getPath()).delete();
+                }
+                model.imported.postValue(new ImportResult(null, null));
             }
         });
-
-        changeFragment(FRAGMENT_TYPE.MAIN_FRAGMENT);
-
-        runTutorialIfFirstRun();
-
-
     }
 
     private void runTutorialIfFirstRun() {
-        //  Declare a new thread to do a preference check
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //  Initialize SharedPreferences
-                SharedPreferences getPrefs = PreferenceManager
-                        .getDefaultSharedPreferences(getBaseContext());
-
-                //  Create a new boolean and preference and set it to true
-                boolean isFirstStart = getPrefs.getBoolean("firstStart", true);
-
-                //  If the activity has never started before...
-                if (isFirstStart) {
-
-                    //  Launch app intro
-                    final Intent i = new Intent(MainActivity.this, IntroActivity.class);
-
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() {
-                            startActivity(i);
-                        }
-                    });
-
-                    //  Make a new preferences editor
-                    SharedPreferences.Editor e = getPrefs.edit();
-
-                    //  Edit preference to make it false because we don't want this to run again
-                    e.putBoolean("firstStart", false);
-
-                    //  Apply changes
-                    e.apply();
-                }
-            }
-        });
-
-        // Start the thread
-        t.start();
+        SharedPreferences prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+        if (prefs.getBoolean("firstStart", true)) {
+            prefs.edit().putBoolean("firstStart", false).apply();
+            startActivity(new Intent(this, IntroActivity.class));
+        }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
+    /** Recover a revoked legacy gallery URI without discarding its route or holds. */
+    public void requestPhotoRelink() {
+        if (state.problem == null) return;
+        state.relinkProblem = state.problem.toBundle();
+        photoPicker.launch(new PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build());
+    }
+
+    public void changeFragment(FRAGMENT_TYPE type) {
+        boolean editor = type == FRAGMENT_TYPE.BOULDER_FRAGMENT;
+        if (editor && state.problem == null) return;
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.flayoutMainActivity, editor ? new BoulderFragment() : new MainFragment(),
+                        editor ? BOULDER_FRAGMENT_TAG : MAIN_FRAGMENT_TAG)
+                .commit();
+        if (!editor) {
+            state.dirty = false;
+            state.bitmap = null;
+        }
+        updateChrome(editor);
+        invalidateOptionsMenu();
+    }
+
+    private void updateChrome() {
+        updateChrome(getSupportFragmentManager().findFragmentById(R.id.flayoutMainActivity) instanceof BoulderFragment);
+    }
+
+    private void updateChrome(boolean editor) {
+        if (toolbar == null) return;
+        findViewById(R.id.fabCamera).setVisibility(editor ? View.GONE : View.VISIBLE);
+        findViewById(R.id.fabGallery).setVisibility(editor ? View.GONE : View.VISIBLE);
+        toolbar.setTitle(editor ? R.string.editor_title : R.string.app_name);
+        toolbar.setNavigationIcon(editor ? AppCompatResources.getDrawable(this, R.drawable.ic_arrow_back) : null);
+        toolbar.setNavigationContentDescription(R.string.back_to_library);
+    }
+
+    @Override public boolean onCreateOptionsMenu(Menu menu) {
         this.menu = menu;
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        String paypalUrl = "https://www.paypal.me/DarkoHerak";
-
-        if(item.getItemId() == R.id.action_donate) {
-            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(paypalUrl));
-            startActivity(browserIntent);
-        }else if (item.getItemId() == R.id.action_tutorial){
-            //TODO run tutorial
-            Intent intent = new Intent(this, IntroActivity.class);
-            startActivity(intent);
-
-
+    @Override public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_tutorial) {
+            startActivity(new Intent(this, IntroActivity.class));
+            return true;
         }
-
+        if (item.getItemId() == R.id.action_donate) {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.paypal.me/DarkoHerak")));
+            } catch (ActivityNotFoundException ignored) { }
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onInfoStoredInteraction(BoulderProblemInfo info) {
-        mBoulderProblemInfo = info;
-        findViewById(R.id.boulderProblemView).invalidate();
+    @Override public void onInfoStoredInteraction(BoulderProblemInfo info) {
+        state.problem = info;
+        setHasUnsavedChanges(true);
+        View editor = findViewById(R.id.boulderProblemView);
+        if (editor != null) editor.invalidate();
     }
 
+    public BoulderProblemInfo getmBoulderProblemInfo() { return state.problem; }
+    public void setmBoulderProblemInfo(BoulderProblemInfo info) {
+        state.problem = info;
+        state.bitmap = null;
+        state.dirty = info != null && info.getId() == null;
+    }
+    public Bitmap getmBoulderBitmap() { return state.bitmap; }
+    public void setmBoulderBitmap(Bitmap bitmap) { state.bitmap = bitmap; }
+    public Uri getmBoulderBitmapUri() { return state.problem == null ? null : state.problem.getInputBitmapUri(); }
+    public void setmBoulderBitmapUri(Uri uri) {
+        if (state.problem != null) state.problem.setInputBitmapUri(uri);
+    }
+    public boolean isHasUnsavedChanges() { return state.dirty; }
+    public void setHasUnsavedChanges(boolean dirty) { state.dirty = dirty; setSaveIconVisibility(dirty); }
+    public Menu getMenu() { return menu; }
+    public void setSaveIconVisibility(boolean visible) {
+        if (menu != null && menu.findItem(R.id.action_save) != null) menu.findItem(R.id.action_save).setVisible(visible);
+    }
+    public void setShareIconVisibility(boolean visible) {
+        if (menu != null && menu.findItem(R.id.action_share) != null) menu.findItem(R.id.action_share).setVisible(visible);
+    }
+    public void setNextFragment(FRAGMENT_TYPE type) { state.navigateToEditor = type == FRAGMENT_TYPE.BOULDER_FRAGMENT; }
 
-    public enum FRAGMENT_TYPE {MAIN_FRAGMENT, BOULDER_FRAGMENT, SETTINGS_FRAGMENT};
-    public final String MAIN_FRAGMENT_TAG = "MAIN_FRAGMENT_TAG";
-    public final String BOULDER_FRAGMENT_TAG = "BOULDER_FRAGMENT_TAG";
-
-    public void changeFragment(FRAGMENT_TYPE newFragmentType)
-    {
-
-        FragmentTransaction transaction;
-        transaction = getSupportFragmentManager().beginTransaction();
-
-        if(newFragmentType == FRAGMENT_TYPE.MAIN_FRAGMENT)
-        {
-            transaction.replace(R.id.flayoutMainActivity, new MainFragment(), MAIN_FRAGMENT_TAG);
-            findViewById(R.id.fabCamera).setVisibility(View.VISIBLE);
-            findViewById(R.id.fabGallery).setVisibility(View.VISIBLE);
-        }
-        else if(newFragmentType == FRAGMENT_TYPE.BOULDER_FRAGMENT)
-        {
-            transaction.replace(R.id.flayoutMainActivity, new BoulderFragment(), BOULDER_FRAGMENT_TAG);
-            findViewById(R.id.fabCamera).setVisibility(View.INVISIBLE);
-            findViewById(R.id.fabGallery).setVisibility(View.INVISIBLE);
-
-        }
-//        else if(newFragmentType == FRAGMENT_TYPE.SETTINGS_FRAGMENT)
-//        {
-//
-//        }
-
-        //changes cannot exist once the fragment is loaded since all would be discarded if another was loaded anyway
-        hasUnsavedChanges = false;
-
-        transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
-        transaction.addToBackStack(null);
-        transaction.commit();
-
+    public static final class EditorState extends ViewModel {
+        BoulderProblemInfo problem;
+        Bitmap bitmap;
+        Uri cameraUri;
+        boolean dirty;
+        boolean navigateToEditor;
+        Bundle relinkProblem;
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
+        final MutableLiveData<ImportResult> imported = new MutableLiveData<>();
+        @Override protected void onCleared() { executor.shutdownNow(); }
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                }
-                return;
-            }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
+    private static final class ImportResult {
+        final BoulderProblemInfo problem;
+        final Bitmap bitmap;
+        boolean consumed;
+        ImportResult(BoulderProblemInfo problem, Bitmap bitmap) {
+            this.problem = problem;
+            this.bitmap = bitmap;
         }
     }
-
-    public void checkAndGetWritePermission() {
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-
-
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-
-            } else {
-
-                // No explanation needed, we can request the permission.
-
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                        MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-
-                // MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE is an
-                // app-defined int constant. The callback method gets the
-                // result of the request.
-            }
-        }
-    }
-
-    @Override
-    public boolean shouldShowRequestPermissionRationale(@NonNull String permission) {
-        switch(permission){
-            case Manifest.permission.WRITE_EXTERNAL_STORAGE:
-            case Manifest.permission.READ_EXTERNAL_STORAGE:
-                return false;
-
-        }
-        return false;
-    }
-
-    public Uri getmBoulderBitmapUri() {
-        return mBoulderBitmapUri;
-    }
-
-    public void setmBoulderBitmapUri(Uri mBoulderBitmapUri) {
-        this.mBoulderBitmapUri = mBoulderBitmapUri;
-    }
-
-    public boolean isHasUnsavedChanges() {
-        return hasUnsavedChanges;
-    }
-
-    public void setHasUnsavedChanges(boolean hasUnsavedChanges) {
-        this.hasUnsavedChanges = hasUnsavedChanges;
-    }
-
-    public Menu getMenu() {
-        return menu;
-    }
-
-    public void setMenu(Menu menu) {
-        this.menu = menu;
-    }
-
-    public void setSaveIconVisibility(boolean isVisible){
-        menu.findItem(R.id.action_save).setVisible(isVisible);
-    }
-
-    public void setShareIconVisibility(boolean isVisible){
-        menu.findItem(R.id.action_share).setVisible(isVisible);
-    }
-
-
 }

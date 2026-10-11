@@ -1,43 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="com.herak.bouldershare.MainActivity">
+    android:layout_height="match_parent">
 
-    <android.support.design.widget.AppBarLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
-
-        <android.support.v7.widget.Toolbar
+        android:background="@color/app_surface"
+        app:elevation="0dp">
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
+            android:background="@color/app_surface"
+            app:title="@string/app_name"
+            app:titleTextColor="@color/on_surface"
+            app:navigationIconTint="@color/on_surface"
+            app:subtitleTextColor="@color/on_surface_variant"
             app:popupTheme="@style/AppTheme.PopupOverlay" />
-
-    </android.support.design.widget.AppBarLayout>
+        <ProgressBar
+            android:id="@+id/photo_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:contentDescription="@string/loading_photo"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/colorPrimary"
+            android:visibility="gone" />
+    </com.google.android.material.appbar.AppBarLayout>
 
     <include layout="@layout/content_main" />
 
-    <android.support.design.widget.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabGallery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="96dp"
+        android:text="@string/choose_photo"
+        android:contentDescription="@string/choose_photo"
+        android:textColor="@color/on_secondary_container"
+        app:backgroundTint="@color/secondary_container"
+        app:icon="@drawable/ic_photo"
+        app:iconTint="@color/on_secondary_container" />
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabCamera"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="@dimen/fab_margin"
-        app:srcCompat="@android:drawable/ic_menu_camera" />
-
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/fabGallery"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:layout_marginBottom="85dp"
-        app:srcCompat="@android:drawable/ic_menu_gallery"
-        app:layout_anchor="@id/fabCamera"
-        app:layout_anchorGravity="top"/>
-
-</android.support.design.widget.CoordinatorLayout>
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="24dp"
+        android:text="@string/take_photo"
+        android:contentDescription="@string/take_photo"
+        android:textColor="@color/on_primary_container"
+        app:backgroundTint="@color/primary_container"
+        app:icon="@drawable/ic_camera"
+        app:iconTint="@color/on_primary_container" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

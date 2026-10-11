@@ -1,12 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This FrameLayout is the fragment container and the CoordinatorLayout scrolling child.
+     A merge root would discard its ID and layout behavior, breaking fragment navigation. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/flayoutMainActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="MainActivity"
-    android:id="@+id/flayoutMainActivity"
-    tools:layout="@layout/fragment_main">
-</FrameLayout>
-
-
+    tools:ignore="MergeRootFrame" />

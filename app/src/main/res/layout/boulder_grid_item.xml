@@ -1,27 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
-
-    <ImageView
-        android:id="@+id/boulderImageView"
-        android:layout_width="wrap_content"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@color/surface_container"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/outline_variant">
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:scaleType="centerCrop"
-        android:adjustViewBounds="true"
-         />
-
-    <TextView
-        android:id="@+id/boulderImageViewText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@id/boulderImageView"
-        android:layout_alignRight="@id/boulderImageView"
-        android:layout_centerVertical="true"
-        android:layout_margin="1dp"
-        android:gravity="center"
-        android:text="Hello"
-        android:textColor="#FFFFFF" />
-
-</RelativeLayout>
+        android:orientation="vertical">
+        <ImageView
+            android:id="@+id/boulderImageView"
+            android:layout_width="match_parent"
+            android:layout_height="176dp"
+            android:scaleType="centerCrop"
+            android:background="@color/outline_variant"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no" />
+        <TextView
+            android:id="@+id/boulderImageViewText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="72dp"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:textColor="@color/on_surface"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:maxLines="3"
+            android:ellipsize="end" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

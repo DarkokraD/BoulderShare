@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
-    <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
+    <color name="colorPrimary">#24654D</color>
+    <color name="colorAccent">#166B74</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#C5EDD6</color>
+    <color name="on_primary_container">#062719</color>
+    <color name="secondary_container">#C9E9EC</color>
+    <color name="on_secondary_container">#082F34</color>
+    <color name="app_background">#F6F8F3</color>
+    <color name="app_surface">#F6F8F3</color>
+    <color name="surface_container">#EAF0E8</color>
+    <color name="on_surface">#1A211B</color>
+    <color name="on_surface_variant">#444F46</color>
+    <color name="outline">#737F75</color>
+    <color name="outline_variant">#C3CCC2</color>
+    <color name="editor_background">#101712</color>
+    <color name="hold_start">#00FF00</color>
+    <color name="hold_regular">#FF0000</color>
+    <color name="hold_top">#FF00FF</color>
 </resources>

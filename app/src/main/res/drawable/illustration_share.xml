@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp" android:height="120dp"
+    android:viewportWidth="320" android:viewportHeight="240">
+    <!-- A saved route card, confirmation and share nodes. -->
+    <path android:fillColor="@color/primary_container"
+        android:pathData="M46,24H178Q194,24 194,40V190Q194,206 178,206H46Q30,206 30,190V40Q30,24 46,24Z" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/on_primary_container"
+        android:strokeWidth="3" android:strokeLineJoin="round"
+        android:pathData="M50,44H174V166H50Z" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/colorPrimary"
+        android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M76,143L112,105L149,66" />
+    <path android:fillColor="@color/on_primary_container"
+        android:pathData="M69,141Q76,135 84,142L80,148L73,148Z M105,104Q112,96 120,104L117,111L108,110Z M142,65Q149,58 156,64L153,72L146,72Z" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/hold_start"
+        android:strokeWidth="3" android:pathData="M76,129a14,14 0,1 0,0,28a14,14 0,0 0,0,-28" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/hold_regular"
+        android:strokeWidth="3" android:pathData="M112,91a14,14 0,1 0,0,28a14,14 0,0 0,0,-28" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/hold_top"
+        android:strokeWidth="3" android:pathData="M149,52a14,14 0,1 0,0,28a14,14 0,0 0,0,-28" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/on_primary_container"
+        android:strokeWidth="4" android:strokeLineCap="round" android:pathData="M52,186H140" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/on_secondary_container"
+        android:strokeWidth="4" android:strokeLineCap="round" android:pathData="M221,99L271,70 M221,99L271,128" />
+    <path android:fillColor="@color/secondary_container" android:strokeColor="@color/on_secondary_container"
+        android:strokeWidth="3" android:pathData="M271,57a13,13 0,1 0,0,26a13,13 0,0 0,0,-26 M221,86a13,13 0,1 0,0,26a13,13 0,0 0,0,-26 M271,115a13,13 0,1 0,0,26a13,13 0,0 0,0,-26" />
+    <path android:fillColor="@color/colorPrimary"
+        android:pathData="M198,157a29,29 0,1 0,0,58a29,29 0,0 0,0,-58" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/on_primary"
+        android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M185,186L194,195L212,177" />
+</vector>

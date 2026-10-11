@@ -51,7 +51,7 @@ public final class BoulderContract {
         }
 
         public static String getBoulderProblemIdFromUri(Uri uri) {
-            return uri.getPathSegments().get(0);
+            return Long.toString(ContentUris.parseId(uri));
         }
 
         public static final String TABLE_NAME = "boulder_problem";
@@ -61,6 +61,8 @@ public final class BoulderContract {
         public static final String COLUMN_INPUTBITMAPURI = "input_bitmap_uri";
         public static final String COLUMN_FINALBITMAPURI = "final_bitmap_uri";
         public static final String COLUMN_GRADE = "grade";
+        public static final String COLUMN_REFERENCE_WIDTH = "reference_width";
+        public static final String COLUMN_REFERENCE_HEIGHT = "reference_height";
     }
 
     public static class HoldsEntry implements BaseColumns{
