@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Boulder.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:foreground="?attr/selectableItemBackground"
     app:cardCornerRadius="20dp"
-    app:cardElevation="0dp"
-    app:cardBackgroundColor="@color/surface_container"
-    app:strokeWidth="1dp"
-    app:strokeColor="@color/outline_variant">
+    app:cardBackgroundColor="@color/surface_high">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -15,21 +14,56 @@
         <ImageView
             android:id="@+id/boulderImageView"
             android:layout_width="match_parent"
-            android:layout_height="176dp"
+            android:layout_height="200dp"
             android:scaleType="centerCrop"
-            android:background="@color/outline_variant"
+            android:background="@color/surface_container"
             android:contentDescription="@null"
             android:importantForAccessibility="no" />
-        <TextView
-            android:id="@+id/boulderImageViewText"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="72dp"
-            android:gravity="center_vertical"
-            android:padding="16dp"
-            android:textColor="@color/on_surface"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:maxLines="3"
-            android:ellipsize="end" />
+            android:orientation="vertical"
+            android:padding="14dp">
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/brand_lime">
+                <TextView
+                    android:id="@+id/boulder_grade"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textAppearance="@style/TextAppearance.Boulder.Label"
+                    android:textColor="@color/on_lime"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </com.google.android.material.card.MaterialCardView>
+            <TextView
+                android:id="@+id/boulderImageViewText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/on_surface"
+                android:textAppearance="@style/TextAppearance.Boulder.Title"
+                android:textSize="18sp"
+                android:maxLines="2"
+                android:ellipsize="end" />
+            <TextView
+                android:id="@+id/boulder_setter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/on_surface_variant"
+                android:textAppearance="@style/TextAppearance.Boulder.Body"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

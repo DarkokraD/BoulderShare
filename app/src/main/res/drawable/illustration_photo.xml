@@ -11,13 +11,13 @@
         android:pathData="M85,143Q94,138 103,144L100,152Q92,157 85,151Z M133,113Q142,105 151,113L147,121Q139,126 133,119Z M173,77Q182,69 190,77L185,86Q177,89 173,83Z" />
     <path android:fillColor="@color/colorPrimary"
         android:pathData="M79,70Q85,65 91,71L89,78L80,79Z M114,86Q121,81 128,87L126,94L116,96Z M175,129Q183,121 191,127L188,136L177,138Z M123,151Q131,148 138,153L134,161L126,160Z" />
-    <path android:fillColor="@color/secondary_container"
+    <path android:fillColor="@color/brand_lime"
         android:pathData="M212,143H239L247,155H269Q283,155 283,169V199Q283,213 269,213H206Q192,213 192,199V169Q192,155 206,155H204Z" />
-    <path android:fillColor="#00000000" android:strokeColor="@color/on_secondary_container"
+    <path android:fillColor="#00000000" android:strokeColor="@color/brand_ink"
         android:strokeWidth="4" android:strokeLineJoin="round"
         android:pathData="M213,150H238L246,162H269Q276,162 276,169V199Q276,206 269,206H206Q199,206 199,199V169Q199,162 206,162H205Z" />
-    <path android:fillColor="#00000000" android:strokeColor="@color/on_secondary_container"
+    <path android:fillColor="#00000000" android:strokeColor="@color/brand_ink"
         android:strokeWidth="4" android:pathData="M237,170a14,14 0,1 0,0,28a14,14 0,0 0,0,-28" />
-    <path android:fillColor="@color/on_secondary_container"
+    <path android:fillColor="@color/brand_ink"
         android:pathData="M261,168a3,3 0,1 0,0,6a3,3 0,0 0,0,-6" />
 </vector>

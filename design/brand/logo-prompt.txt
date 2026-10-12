@@ -1,0 +1,7 @@
+Mode: built-in image_gen, transparent background, no reference image.
+
+Use case: logo-brand. Asset type: new Android app brand mark for BoulderShare, an app for photographing indoor climbing walls, marking holds, and sharing climbing routes. Create one original, polished, extremely simple graphic logo symbol with no lettering: a sturdy abstract letter B formed from two rounded angular climbing holds stacked vertically, a clever negative-space climbing route rising between them. Contemporary outdoor sporting identity, confident compact silhouette, asymmetrical facets suggesting real bouldering holds, broad shapes that remain legible at 24 pixels. Flat deep forest ink (#142D28) and a restrained vivid chartreuse accent (#D4F36B). Isolated centered symbol with generous clear space. Clean sharp vector-like edges, no texture, no shadows, no gradients, no mockup, no border, no extra icons, no watermark. Transparent background. Final single mark, not a presentation sheet.
+
+The generated concept is preserved unchanged in bouldershare-logo-concept.png.
+The production mark is a simplified vector refinement in bouldershare-logo.svg,
+with matching Android VectorDrawable and adaptive/monochrome launcher assets.

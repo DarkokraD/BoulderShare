@@ -35,6 +35,11 @@ The application's ID remains `com.herak.bouldershare`.
 - **Choose photo** opens the system photo picker (with a document picker fallback).
   **Take photo** uses your installed camera app. No broad storage or camera permission is needed.
 - Tap a hold to add a marker; tap an existing marker to remove it.
+- Turn on **Smart marking** to fit new markers around the tapped hold automatically.
+  It works offline and remembers your preference. Detection runs in the background;
+  drag a marker or use **Resize hold** to correct the fit. If no clear outline is
+  found, the ordinary marker remains usable. Small holds, shadows, chalk and nearby
+  holds can produce imperfect fits.
 - Double tap a marker to cycle between start, regular and finish holds.
 - Pinch to zoom into the wall (up to 8×); drag empty space to pan. **Fit photo**
   resets the view. Zooming never changes the saved or shared image framing.
@@ -100,3 +105,50 @@ Dependency versions are pinned in `app/build.gradle`. Official version reference
 [AndroidX](https://developer.android.com/jetpack/androidx/versions),
 [Material Components](https://github.com/material-components/material-components-android/releases),
 [Glide](https://github.com/bumptech/glide/releases).
+
+## Smart marking model
+
+Smart marking uses MediaPipe Tasks Vision **1.1.0** and the bundled MagicTouch v2
+int8 model, version **1**. The model is bundled to avoid photo uploads, runtime
+downloads and network access. Model initialization and inference run on one
+background worker with a bounded request queue. Touching or resizing a marker,
+disabling Smart marking, saving or leaving the editor cancels its pending fit.
+Saving uses the currently visible geometry and does not wait for detection.
+
+Each tap prompts a short positive stroke in a local crop, which helps the model
+separate small holds from the wall. Detection retries with a larger crop if the
+outline reaches the crop boundary. Only the confident region containing the tap
+determines the marker; unclear or oversized regions keep the manual marker.
+
+The model adds about 30.5 MB before APK compression; MediaPipe also includes native
+libraries. See [model provenance and attribution](app/src/main/assets/SMART_MARKING_MODEL.md)
+for the pinned source and SHA-256. The editor still saves ordinary center/radius
+markers, so existing routes and exports need no schema changes.
+
+## Marker settings
+
+Smart marking is enabled by default; an explicit off selection is remembered.
+Open **Marker settings** from the overflow menu to adjust stroke width (1–20 px),
+border width (0–10 px per side), automatic padding (0–20 px), and the Start, Hold,
+and Top colors using RGB sliders or six-digit hex input. Defaults are a 3 px
+stroke, 1 px border and 2 px automatic padding. Dimensions use pixels in the
+loaded photo (which can be resized during import), and scale with zoom/export.
+
+The stored marker radius describes the clear interior. Both stroke and border
+are drawn outside it, so even thick markers leave the detected hold visible.
+Automatic fits enclose the detected mask plus the chosen padding; padding applies
+to new fits. Appearance settings also update editor legends, and Share regenerates
+the image using the settings captured when sharing, including previously saved routes.
+
+## Visual identity
+
+BoulderShare uses a climbing-hold monogram, chalk surfaces, forest ink and lime
+accents. The native interface supports light and dark themes, photo-first route
+cards, compact editor controls and responsive landscape layouts. Outfit headings
+are bundled as static fonts for Android 7.0 compatibility; body text uses the
+system font. The font's SIL Open Font License is included in app assets.
+
+The [design kit](design/index.html) contains the production SVG logo, palette,
+typography, screen previews and the original image-generation prompt. The generated
+logo concept is preserved separately; the app uses a simplified vector version for
+sharp rendering, themed branding and adaptive/monochrome launcher icons.

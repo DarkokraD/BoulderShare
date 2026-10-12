@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#A0D4B7</color>
-    <color name="colorAccent">#98D2D9</color>
-    <color name="on_primary">#003823</color>
-    <color name="primary_container">#174E37</color>
-    <color name="on_primary_container">#C5EDD6</color>
-    <color name="secondary_container">#164F56</color>
-    <color name="on_secondary_container">#C9E9EC</color>
-    <color name="app_background">#101510</color>
-    <color name="app_surface">#101510</color>
-    <color name="surface_container">#1C251E</color>
-    <color name="on_surface">#DFE7DD</color>
-    <color name="on_surface_variant">#C3CCC2</color>
-    <color name="outline">#8C978D</color>
-    <color name="outline_variant">#444F46</color>
+    <color name="colorPrimary">#D4F36B</color>
+    <color name="colorAccent">#BCD78D</color>
+    <color name="on_primary">#142D28</color>
+    <color name="primary_container">#30442A</color>
+    <color name="on_primary_container">#E7F1C4</color>
+    <color name="secondary_container">#383B2E</color>
+    <color name="on_secondary_container">#E7E6D8</color>
+    <color name="app_background">#0F1D18</color>
+    <color name="app_surface">#0F1D18</color>
+    <color name="surface_container">#1B2D24</color>
+    <color name="surface_high">#22382B</color>
+    <color name="on_surface">#EFF3E7</color>
+    <color name="on_surface_variant">#B4C0AF</color>
+    <color name="outline">#87967F</color>
+    <color name="outline_variant">#3A4B3D</color>
+    <color name="brand_mark_body">#EFF3E7</color>
 </resources>

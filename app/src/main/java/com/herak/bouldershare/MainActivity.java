@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -90,6 +91,9 @@ public class MainActivity extends AppCompatActivity implements InfoFragment.OnIn
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(view -> getOnBackPressedDispatcher().onBackPressed());
+        findViewById(R.id.library_capture_bar).addOnLayoutChangeListener(
+                (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+                        updateLibraryContentInset());
         findViewById(R.id.fabCamera).setOnClickListener(view -> takePhoto());
         findViewById(R.id.fabGallery).setOnClickListener(view -> photoPicker.launch(
                 new PickVisualMediaRequest.Builder()
@@ -155,7 +159,8 @@ public class MainActivity extends AppCompatActivity implements InfoFragment.OnIn
     }
 
     @Override protected void onSaveInstanceState(@NonNull Bundle outState) {
-        flushPendingEditorTap();
+        View editor = findViewById(R.id.boulderProblemView);
+        if (editor instanceof BoulderProblemView) ((BoulderProblemView) editor).prepareForSnapshot();
         if (state.problem != null) outState.putBundle("problem", state.problem.toBundle());
         outState.putBoolean("dirty", state.dirty);
         outState.putBoolean("navigate_to_editor", state.navigateToEditor);
@@ -244,11 +249,24 @@ public class MainActivity extends AppCompatActivity implements InfoFragment.OnIn
 
     private void updateChrome(boolean editor) {
         if (toolbar == null) return;
-        findViewById(R.id.fabCamera).setVisibility(editor ? View.GONE : View.VISIBLE);
-        findViewById(R.id.fabGallery).setVisibility(editor ? View.GONE : View.VISIBLE);
+        findViewById(R.id.library_capture_bar).setVisibility(editor ? View.GONE : View.VISIBLE);
+        updateLibraryContentInset();
         toolbar.setTitle(editor ? R.string.editor_title : R.string.app_name);
+        toolbar.setLogo(editor ? null : AppCompatResources.getDrawable(this, R.drawable.brand_mark));
         toolbar.setNavigationIcon(editor ? AppCompatResources.getDrawable(this, R.drawable.ic_arrow_back) : null);
         toolbar.setNavigationContentDescription(R.string.back_to_library);
+    }
+
+    /** Reserve the measured import bar height, including enlarged text, below the library. */
+    private void updateLibraryContentInset() {
+        View captureBar = findViewById(R.id.library_capture_bar);
+        View content = findViewById(R.id.flayoutMainActivity);
+        ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) content.getLayoutParams();
+        int inset = captureBar.getVisibility() == View.VISIBLE ? captureBar.getHeight() : 0;
+        if (params.bottomMargin != inset) {
+            params.bottomMargin = inset;
+            content.setLayoutParams(params);
+        }
     }
 
     @Override public boolean onCreateOptionsMenu(Menu menu) {
@@ -258,6 +276,14 @@ public class MainActivity extends AppCompatActivity implements InfoFragment.OnIn
     }
 
     @Override public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_settings) {
+            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.flayoutMainActivity);
+            if (fragment instanceof BoulderFragment && ((BoulderFragment) fragment).isBusy()) return true;
+            View view = findViewById(R.id.boulderProblemView);
+            if (view instanceof BoulderProblemView) ((BoulderProblemView) view).prepareForSnapshot();
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        }
         if (item.getItemId() == R.id.action_tutorial) {
             startActivity(new Intent(this, IntroActivity.class));
             return true;

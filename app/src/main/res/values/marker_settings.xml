@@ -1,0 +1,35 @@
+<resources>
+    <string name="marker_settings_title">Marker settings</string>
+    <string name="marker_settings_intro">Make your markers easier to see.</string>
+    <string name="marker_settings_units">Sizes use pixels in the loaded photo and scale as you zoom. Automatic padding applies to new smart markers.</string>
+    <string name="marker_stroke_label">Stroke width</string>
+    <string name="marker_border_label">Border width</string>
+    <string name="marker_border_hint">On each side of the stroke. Set to 0 for no border.</string>
+    <string name="marker_padding_label">Automatic padding</string>
+    <string name="marker_padding_hint">Clear space between a detected hold and its marker.</string>
+    <string name="marker_dimension_value">%1$.1f px</string>
+    <string name="marker_colors_title">Hold colors</string>
+    <string name="marker_color_action">%1$s · %2$s</string>
+    <string name="marker_preview_description">Preview of start, regular, and top hold markers with your current settings</string>
+    <string name="marker_restore_defaults">Restore defaults</string>
+    <string name="marker_color_title">%1$s color</string>
+    <string name="marker_color_hex">Hex color</string>
+    <string name="marker_color_hex_hint">Enter six hex digits, for example #60E697</string>
+    <string name="marker_color_hex_error">Use six hex digits: #RRGGBB</string>
+    <string name="marker_color_red">Red</string>
+    <string name="marker_color_green">Green</string>
+    <string name="marker_color_blue">Blue</string>
+    <string name="marker_color_picker_hint">Pick a color with the sliders or enter its hex value.</string>
+    <string name="marker_color_swatch">Selected color: %1$s</string>
+    <item type="id" name="marker_stroke" />
+    <item type="id" name="marker_border" />
+    <item type="id" name="marker_padding" />
+    <item type="id" name="marker_start_color" />
+    <item type="id" name="marker_regular_color" />
+    <item type="id" name="marker_top_color" />
+    <item type="id" name="marker_defaults" />
+    <item type="id" name="marker_color_hex" />
+    <item type="id" name="marker_color_red" />
+    <item type="id" name="marker_color_green" />
+    <item type="id" name="marker_color_blue" />
+</resources>

@@ -24,6 +24,9 @@ import com.herak.bouldershare.R;
 import com.herak.bouldershare.classes.BoulderProblemInfo;
 import com.herak.bouldershare.classes.BoulderProblemView;
 import com.herak.bouldershare.classes.ImageFiles;
+import com.herak.bouldershare.classes.Hold;
+import com.herak.bouldershare.classes.MarkerAppearance;
+import com.herak.bouldershare.classes.MarkerSettings;
 import com.herak.bouldershare.data.BoulderContract;
 import com.herak.bouldershare.data.BoulderRepository;
 
@@ -140,6 +143,50 @@ public class EditorSaveInstrumentedTest {
             });
             deleteRoute(context, info);
             input.delete(); source.recycle();
+        }
+    }
+
+    @Test public void sharingExistingExportUsesCapturedCurrentAppearance() throws Exception {
+        Context context = ApplicationProvider.getApplicationContext();
+        MarkerAppearance previous = MarkerSettings.load(context);
+        Bitmap source = Bitmap.createBitmap(300, 200, Bitmap.Config.ARGB_8888);
+        source.eraseColor(Color.BLUE);
+        File input = photo(context, source);
+        BoulderProblemInfo info = route(Uri.fromFile(input)); info.setReferenceSize(300, 200);
+        info.getHolds().add(new Hold(150, 120, 20));
+        info.setFinalBitmapUri(ImageFiles.export(context, source));
+        Uri original = info.getFinalBitmapUri();
+        BoulderFragment.SaveModel model = new BoulderFragment.SaveModel();
+        AtomicReference<BoulderFragment.SaveResult> result = new AtomicReference<>();
+        CountDownLatch completed = new CountDownLatch(1);
+        Observer<BoulderFragment.SaveResult> observer = value -> {
+            if (value != null && !value.pending) { result.set(value); completed.countDown(); }
+        };
+        try {
+            BoulderRepository.save(context, info);
+            MarkerSettings.save(context, new MarkerAppearance(20, 0, 2, Color.RED, Color.RED, Color.RED));
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                model.result.observeForever(observer);
+                model.start(context, BoulderProblemInfo.fromBundle(info.toBundle()), source, false, true);
+                MarkerSettings.save(context, new MarkerAppearance(20, 0, 2, Color.GREEN, Color.GREEN, Color.GREEN));
+            });
+            assertTrue(completed.await(15, TimeUnit.SECONDS));
+            BoulderFragment.SaveResult saved = result.get();
+            assertNotNull(saved); assertFalse(saved.error); assertTrue(saved.saved);
+            assertNotEquals(original, saved.info.getFinalBitmapUri());
+            info.setFinalBitmapUri(saved.info.getFinalBitmapUri());
+            Bitmap exported = ImageFiles.load(context, info.getFinalBitmapUri());
+            try {
+                int pixel = exported.getPixel(180, 120);
+                assertTrue("Export must use the red style captured at Share", Color.red(pixel) > Color.green(pixel) + 80);
+            } finally { exported.recycle(); }
+            context.getContentResolver().delete(saved.shareUri, null, null);
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                model.result.removeObserver(observer); model.onCleared();
+            });
+            deleteRoute(context, info); context.getContentResolver().delete(original, null, null);
+            MarkerSettings.save(context, previous); input.delete(); source.recycle();
         }
     }
 

@@ -15,6 +15,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 /** A small, accessible walkthrough without a separate onboarding dependency. */
 public class IntroActivity extends AppCompatActivity {
@@ -95,7 +96,8 @@ public class IntroActivity extends AppCompatActivity {
         body.setText(BODIES[step]);
         stepLabel.setText(getString(R.string.tutorial_step, step + 1, TITLES.length));
         image.setImageResource(IMAGES[step]);
-        previous.setVisibility(step == 0 ? View.INVISIBLE : View.VISIBLE);
+        ((LinearProgressIndicator) findViewById(R.id.intro_progress)).setProgress(step + 1);
+        previous.setVisibility(step == 0 ? View.GONE : View.VISIBLE);
         next.setText(step == TITLES.length - 1 ? R.string.tutorial_done : R.string.tutorial_next);
     }
 

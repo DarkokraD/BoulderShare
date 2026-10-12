@@ -24,9 +24,9 @@
         android:strokeWidth="4" android:strokeLineCap="round" android:pathData="M221,99L271,70 M221,99L271,128" />
     <path android:fillColor="@color/secondary_container" android:strokeColor="@color/on_secondary_container"
         android:strokeWidth="3" android:pathData="M271,57a13,13 0,1 0,0,26a13,13 0,0 0,0,-26 M221,86a13,13 0,1 0,0,26a13,13 0,0 0,0,-26 M271,115a13,13 0,1 0,0,26a13,13 0,0 0,0,-26" />
-    <path android:fillColor="@color/colorPrimary"
+    <path android:fillColor="@color/brand_lime"
         android:pathData="M198,157a29,29 0,1 0,0,58a29,29 0,0 0,0,-58" />
-    <path android:fillColor="#00000000" android:strokeColor="@color/on_primary"
+    <path android:fillColor="#00000000" android:strokeColor="@color/brand_ink"
         android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round"
         android:pathData="M185,186L194,195L212,177" />
 </vector>

@@ -1,0 +1,5 @@
+Indoor Climbing Wall in Stuttgart by Dmitri Chubarov.
+Source: https://commons.wikimedia.org/wiki/File:Indoor_Climbing_Wall_in_Stuttgart.jpg
+License: CC BY-SA 2.0 https://creativecommons.org/licenses/by-sa/2.0/
+The photo is a 640 x 480 rendition of the original and is used as an Android
+instrumentation test fixture only. It is not bundled with the application.

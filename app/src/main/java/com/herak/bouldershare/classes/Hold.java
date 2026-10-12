@@ -56,6 +56,7 @@ public class Hold {
     }
 
     HoldType type = HoldType.START_HOLD;
+    // Clear interior radius: marker strokes are drawn outside this boundary.
     int circleRadius;
 
     public Hold(float x, float y){

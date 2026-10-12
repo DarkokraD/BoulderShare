@@ -3,7 +3,9 @@ package com.herak.bouldershare.fragments;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -24,6 +26,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.LabelFormatter;
 import com.google.android.material.slider.Slider;
 import com.herak.bouldershare.MainActivity;
@@ -32,6 +35,8 @@ import com.herak.bouldershare.classes.BoulderProblemInfo;
 import com.herak.bouldershare.classes.BoulderProblemView;
 import com.herak.bouldershare.classes.ImageFiles;
 import com.herak.bouldershare.classes.Hold;
+import com.herak.bouldershare.classes.MarkerAppearance;
+import com.herak.bouldershare.classes.MarkerSettings;
 import com.herak.bouldershare.data.BoulderRepository;
 
 import java.util.Objects;
@@ -44,6 +49,8 @@ public class BoulderFragment extends Fragment {
     private BoulderProblemView editor;
     private SaveModel saveModel;
     private TextView gestureHint;
+    private TextView smartStatus;
+    private MaterialSwitch smartMarkingSwitch;
     private MaterialButton fitPhotoButton, resizeHoldButton;
     private AlertDialog sizeDialog;
 
@@ -59,6 +66,19 @@ public class BoulderFragment extends Fragment {
         ((RelativeLayout) root.findViewById(R.id.rlBoulderFragment)).addView(editor,
                 new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         gestureHint = root.findViewById(R.id.editor_gesture_hint);
+        smartStatus = root.findViewById(R.id.smart_marking_status);
+        smartMarkingSwitch = root.findViewById(R.id.smart_marking);
+        Context context = requireContext();
+        SharedPreferences preferences = context.getSharedPreferences(
+                context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        smartMarkingSwitch.setChecked(preferences.getBoolean("smart_marking", true));
+        editor.setSmartMarkingEnabled(smartMarkingSwitch.isChecked());
+        editor.setOnSmartMarkingStatusListener(this::showSmartMarkingStatus);
+        smartMarkingSwitch.setOnCheckedChangeListener((button, enabled) -> {
+            editor.flushPendingSingleTap();
+            editor.setSmartMarkingEnabled(enabled);
+            preferences.edit().putBoolean("smart_marking", enabled).apply();
+        });
         fitPhotoButton = root.findViewById(R.id.action_fit_photo);
         resizeHoldButton = root.findViewById(R.id.action_resize_hold);
         fitPhotoButton.setOnClickListener(view -> {
@@ -82,6 +102,35 @@ public class BoulderFragment extends Fragment {
         });
         updateEditorControls();
         return root;
+    }
+
+    @Override public void onResume() {
+        super.onResume();
+        if (editor == null) return;
+        MarkerAppearance previous = editor.getMarkerAppearance();
+        MarkerAppearance current = MarkerSettings.load(requireContext());
+        editor.setMarkerAppearance(current);
+        if ((previous.strokeWidth != current.strokeWidth || previous.borderWidth != current.borderWidth
+                || previous.startColor != current.startColor || previous.regularColor != current.regularColor
+                || previous.topColor != current.topColor) && !editor.getBoulderProblemInfo().getHolds().isEmpty()) {
+            ((MainActivity) requireActivity()).setHasUnsavedChanges(true);
+        }
+        updateLegend(R.id.legend_start, current.startColor);
+        updateLegend(R.id.legend_regular, current.regularColor);
+        updateLegend(R.id.legend_top, current.topColor);
+    }
+
+    private void updateLegend(int id, int color) {
+        TextView label = requireView().findViewById(id);
+        GradientDrawable swatch = new GradientDrawable();
+        swatch.setShape(GradientDrawable.OVAL);
+        float density = getResources().getDisplayMetrics().density;
+        swatch.setColor(color);
+        swatch.setStroke(Math.max(1, Math.round(density)),
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.on_surface));
+        int size = Math.round(14 * density);
+        swatch.setSize(size, size);
+        label.setCompoundDrawablesRelativeWithIntrinsicBounds(swatch, null, null, null);
     }
 
     @Override public void onViewCreated(View view, Bundle state) {
@@ -128,6 +177,27 @@ public class BoulderFragment extends Fragment {
         resizeHoldButton.setText(choosing ? R.string.cancel : R.string.resize_hold);
         fitPhotoButton.setEnabled(!saveModel.busy);
         resizeHoldButton.setEnabled(!saveModel.busy);
+        smartMarkingSwitch.setEnabled(!saveModel.busy);
+        requireActivity().invalidateOptionsMenu();
+    }
+
+    private void showSmartMarkingStatus(BoulderProblemView.SmartMarkingStatus status) {
+        if (smartStatus == null) return;
+        int message;
+        switch (status) {
+            case DETECTING: message = R.string.smart_marking_detecting; break;
+            case FITTED: message = R.string.smart_marking_fitted; break;
+            case MANUAL_FALLBACK: message = R.string.smart_marking_manual; break;
+            case UNAVAILABLE: message = R.string.smart_marking_unavailable; break;
+            default:
+                if (editor == null || !editor.isSmartMarkingEnabled()) {
+                    smartStatus.setVisibility(View.GONE);
+                    return;
+                }
+                message = R.string.smart_marking_hint;
+        }
+        smartStatus.setText(message);
+        smartStatus.setVisibility(View.VISIBLE);
     }
 
     private void showHoldSizeDialog(Hold hold) {
@@ -170,6 +240,7 @@ public class BoulderFragment extends Fragment {
         menu.findItem(R.id.action_info).setVisible(true).setEnabled(!saveModel.busy);
         menu.findItem(R.id.action_share).setVisible(true).setEnabled(!saveModel.busy);
         menu.findItem(R.id.action_save).setVisible(activity.isHasUnsavedChanges()).setEnabled(!saveModel.busy);
+        menu.findItem(R.id.action_settings).setEnabled(!saveModel.busy);
     }
 
     @Override public boolean onOptionsItemSelected(MenuItem item) {
@@ -189,7 +260,7 @@ public class BoulderFragment extends Fragment {
             BoulderProblemInfo info = BoulderProblemInfo.fromBundle(editor.getBoulderProblemInfo().toBundle());
             boolean needsSave = activity.isHasUnsavedChanges() || info.getFinalBitmapUri() == null || info.getId() == null;
             saveModel.start(requireContext().getApplicationContext(), info, activity.getmBoulderBitmap(),
-                    needsSave, item.getItemId() == R.id.action_share);
+                    needsSave, item.getItemId() == R.id.action_share, editor.getMarkerAppearance());
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -202,8 +273,11 @@ public class BoulderFragment extends Fragment {
 
     @Override public void onDestroyView() {
         if (sizeDialog != null) sizeDialog.dismiss();
+        if (editor != null) editor.setOnSmartMarkingStatusListener(null);
         editor = null;
         gestureHint = null;
+        smartStatus = null;
+        smartMarkingSwitch = null;
         fitPhotoButton = resizeHoldButton = null;
         super.onDestroyView();
     }
@@ -214,6 +288,11 @@ public class BoulderFragment extends Fragment {
         volatile boolean busy;
 
         void start(Context context, BoulderProblemInfo info, Bitmap bitmap, boolean needsSave, boolean share) {
+            start(context, info, bitmap, needsSave, share, MarkerSettings.load(context));
+        }
+
+        void start(Context context, BoulderProblemInfo info, Bitmap bitmap, boolean needsSave,
+                   boolean share, MarkerAppearance appearance) {
             if (busy) return;
             busy = true;
             result.setValue(new SaveResult(info, true, false, false, null));
@@ -221,13 +300,10 @@ public class BoulderFragment extends Fragment {
                 boolean saved = false;
                 try {
                     Uri shareUri = null;
-                    boolean regenerate = needsSave;
-                    if (share && !needsSave) {
-                        try { shareUri = ImageFiles.shareableUri(context, info.getFinalBitmapUri()); }
-                        catch (IOException | SecurityException unavailableExport) { regenerate = true; }
-                    }
+                    // A saved image can predate global appearance settings changed in the library.
+                    boolean regenerate = needsSave || share;
                     if (regenerate) {
-                        Bitmap export = BoulderProblemView.render(bitmap, info);
+                        Bitmap export = BoulderProblemView.render(bitmap, info, appearance);
                         try { info.setFinalBitmapUri(ImageFiles.export(context, export)); }
                         finally { export.recycle(); }
                         BoulderRepository.save(context, info);

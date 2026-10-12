@@ -9,14 +9,20 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="24dp"
+        android:paddingTop="4dp"
         android:paddingEnd="24dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="12dp">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/details_intro"
+            android:textAppearance="@style/TextAppearance.Boulder.Body"
+            android:textColor="@color/on_surface_variant" />
         <com.google.android.material.textfield.TextInputLayout
             style="@style/RouteTextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:hint="@string/problem_name"
             app:counterEnabled="true"
             app:counterMaxLength="30">
@@ -24,16 +30,16 @@
                 android:id="@+id/etInfoProblemName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
                 android:inputType="textCapSentences"
                 android:maxLength="30"
-                android:maxLines="1"
-                android:imeOptions="actionNext" />
+                android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.textfield.TextInputLayout
             style="@style/RouteTextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:hint="@string/author"
             app:counterEnabled="true"
             app:counterMaxLength="20">
@@ -41,16 +47,41 @@
                 android:id="@+id/etInfoAuthor"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
                 android:inputType="textCapWords"
                 android:maxLength="20"
-                android:maxLines="1"
-                android:imeOptions="actionNext" />
+                android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/grade_pill_background"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp">
+            <TextView
+                android:id="@+id/grade_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:labelFor="@id/pickerGrade"
+                android:text="@string/grade_label"
+                android:textAppearance="@style/TextAppearance.Boulder.Title"
+                android:textColor="@color/on_surface" />
+            <NumberPicker
+                android:id="@+id/pickerGrade"
+                android:layout_width="wrap_content"
+                android:layout_height="128dp"
+                android:contentDescription="@string/grade_label"
+                android:descendantFocusability="blocksDescendants" />
+        </LinearLayout>
         <com.google.android.material.textfield.TextInputLayout
             style="@style/RouteTextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:hint="@string/comment"
             app:counterEnabled="true"
             app:counterMaxLength="160">
@@ -60,31 +91,9 @@
                 android:layout_height="wrap_content"
                 android:gravity="top"
                 android:inputType="textCapSentences|textMultiLine"
-                android:minLines="2"
+                android:maxLength="160"
                 android:maxLines="4"
-                android:maxLength="160" />
+                android:minLines="2" />
         </com.google.android.material.textfield.TextInputLayout>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-            <TextView
-                android:id="@+id/grade_label"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:labelFor="@id/pickerGrade"
-                android:text="@string/grade_label"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
-                android:textColor="@color/on_surface" />
-            <NumberPicker
-                android:id="@+id/pickerGrade"
-                android:layout_width="wrap_content"
-                android:layout_height="144dp"
-                android:contentDescription="@string/grade_label"
-                android:descendantFocusability="blocksDescendants" />
-        </LinearLayout>
     </LinearLayout>
 </ScrollView>

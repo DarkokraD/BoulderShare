@@ -32,10 +32,12 @@ public class BoulderGridViewAdapter extends CursorAdapter {
         String title = value(cursor, "name");
         String grade = value(cursor, "grade"), author = value(cursor, "author");
         if (title.isEmpty()) title = context.getString(R.string.untitled_problem);
-        if (!grade.isEmpty()) title += " · " + grade;
-        if (!author.isEmpty()) title += "\n" + author;
         ((TextView) view.findViewById(R.id.boulderImageViewText)).setText(title);
-        image.setContentDescription(title);
+        ((TextView) view.findViewById(R.id.boulder_grade)).setText(grade.isEmpty()
+                ? context.getString(R.string.route_grade_unknown) : grade);
+        TextView setter = view.findViewById(R.id.boulder_setter);
+        setter.setText(author.isEmpty() ? "" : context.getString(R.string.route_setter_format, author));
+        setter.setVisibility(author.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     @Override public View newView(Context context, Cursor cursor, ViewGroup parent) {

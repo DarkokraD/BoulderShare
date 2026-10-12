@@ -4,18 +4,19 @@
     android:id="@+id/main_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/app_surface"
+        android:background="@color/app_background"
         app:elevation="0dp">
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/app_surface"
+            android:background="@color/app_background"
             app:title="@string/app_name"
+            app:titleTextAppearance="@style/TextAppearance.Boulder.Title"
+            app:titleMarginStart="12dp"
             app:titleTextColor="@color/on_surface"
             app:navigationIconTint="@color/on_surface"
             app:subtitleTextColor="@color/on_surface_variant"
@@ -24,39 +25,69 @@
             android:id="@+id/photo_progress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="4dp"
+            android:layout_height="3dp"
             android:contentDescription="@string/loading_photo"
             android:indeterminate="true"
             android:indeterminateTint="@color/colorPrimary"
             android:visibility="gone" />
     </com.google.android.material.appbar.AppBarLayout>
-
     <include layout="@layout/content_main" />
-
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fabGallery"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/library_capture_bar"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="96dp"
-        android:text="@string/choose_photo"
-        android:contentDescription="@string/choose_photo"
-        android:textColor="@color/on_secondary_container"
-        app:backgroundTint="@color/secondary_container"
-        app:icon="@drawable/ic_photo"
-        app:iconTint="@color/on_secondary_container" />
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fabCamera"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="24dp"
-        android:text="@string/take_photo"
-        android:contentDescription="@string/take_photo"
-        android:textColor="@color/on_primary_container"
-        app:backgroundTint="@color/primary_container"
-        app:icon="@drawable/ic_camera"
-        app:iconTint="@color/on_primary_container" />
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/app_background"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/capture_section_title"
+            android:textAppearance="@style/TextAppearance.Boulder.Label"
+            android:textColor="@color/on_surface_variant" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/fabCamera"
+                style="@style/Widget.Boulder.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:minHeight="56dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textSize="14sp"
+                android:text="@string/take_photo"
+                android:contentDescription="@string/take_photo"
+                app:icon="@drawable/ic_camera"
+                app:iconSize="18dp"
+                app:iconPadding="6dp"
+                app:iconGravity="textStart" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/fabGallery"
+                style="@style/Widget.Boulder.Button.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="56dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textSize="14sp"
+                android:text="@string/choose_photo"
+                android:contentDescription="@string/choose_photo"
+                app:icon="@drawable/ic_photo"
+                app:iconSize="18dp"
+                app:iconPadding="6dp"
+                app:iconGravity="textStart" />
+        </LinearLayout>
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

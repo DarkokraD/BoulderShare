@@ -109,6 +109,21 @@ public class BoulderGestureInstrumentedTest {
         });
     }
 
+    @Test public void draggingThickOuterRingMovesItsHold() {
+        Hold hold = new Hold(300, 200, 80); info.getHolds().add(hold);
+        withEditor(editor -> {
+            editor.setMarkerAppearance(new MarkerAppearance(20, 10, 2, Color.RED, Color.GREEN, Color.BLUE));
+            long down = SystemClock.uptimeMillis();
+            // This border is outside both the clear radius and the minimum touch radius.
+            send(editor, down, 0, MotionEvent.ACTION_DOWN, new int[]{0}, 415, 200);
+            send(editor, down, 20, MotionEvent.ACTION_MOVE, new int[]{0}, 515, 260);
+            send(editor, down, 30, MotionEvent.ACTION_UP, new int[]{0}, 515, 260);
+            editor.flushPendingSingleTap();
+            assertEquals(400, hold.getX(), .001f); assertEquals(260, hold.getY(), .001f);
+            assertEquals(1, info.getHolds().size());
+        });
+    }
+
     @Test public void emptyDragPansAndPointerTransitionsCannotCreateOrMoveMarkers() {
         withEditor(editor -> {
             pinch(editor);

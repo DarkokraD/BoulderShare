@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -11,8 +10,17 @@
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
         android:paddingTop="16dp"
+        android:text="@string/library_eyebrow"
+        android:textAppearance="@style/TextAppearance.Boulder.Label"
+        android:textColor="@color/on_surface_variant" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="6dp"
         android:text="@string/your_problems"
-        android:textAppearance="?attr/textAppearanceHeadlineMedium"
+        android:textAppearance="@style/TextAppearance.Boulder.Display"
         android:textColor="@color/on_surface"
         android:accessibilityHeading="true"
         tools:targetApi="28" />
@@ -21,10 +29,10 @@
         android:layout_height="wrap_content"
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="20dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="24dp"
         android:text="@string/library_subtitle"
-        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textAppearance="@style/TextAppearance.Boulder.Body"
         android:textColor="@color/on_surface_variant" />
     <FrameLayout
         android:layout_width="match_parent"
@@ -35,9 +43,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="176dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="16dp"
             android:columnWidth="160dp"
             android:drawSelectorOnTop="false"
             android:gravity="center"
@@ -51,39 +59,39 @@
             android:layout_height="match_parent"
             android:fillViewport="true"
             android:visibility="gone">
-          <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="176dp">
-            <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_wall"
-                app:tint="@color/colorPrimary"
-                android:contentDescription="@null"
-                android:importantForAccessibility="no" />
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:orientation="vertical"
                 android:gravity="center"
-                android:text="@string/empty_title"
-                android:textAppearance="?attr/textAppearanceTitleLarge"
-                android:textColor="@color/on_surface" />
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="@string/empty_message"
-                android:textAppearance="?attr/textAppearanceBodyLarge"
-                android:textColor="@color/on_surface_variant" />
-          </LinearLayout>
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="24dp">
+                <ImageView
+                    android:layout_width="240dp"
+                    android:layout_height="180dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/illustration_photo"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:gravity="center"
+                    android:text="@string/empty_title"
+                    android:textAppearance="@style/TextAppearance.Boulder.Title"
+                    android:textColor="@color/on_surface" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="@string/empty_message"
+                    android:textAppearance="@style/TextAppearance.Boulder.Body"
+                    android:textColor="@color/on_surface_variant" />
+            </LinearLayout>
         </ScrollView>
     </FrameLayout>
 </LinearLayout>

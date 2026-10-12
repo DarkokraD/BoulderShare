@@ -1,0 +1,8 @@
+Outfit, by the Outfit Project Authors.
+Source: https://github.com/google/fonts/tree/main/ofl/outfit
+Downloaded: 2026-10-11
+License: SIL Open Font License 1.1 (bundled in app/src/main/assets/Outfit-OFL.txt).
+
+The variable source was instantiated at weights 600 and 700 using fontTools
+4.66.1. Static font files ensure consistent rendering on Android 7.0 and newer.
+Body text uses the Android system sans-serif font.
