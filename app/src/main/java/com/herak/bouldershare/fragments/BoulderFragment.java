@@ -4,6 +4,7 @@ import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -18,14 +19,13 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.activity.OnBackPressedCallback;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.LabelFormatter;
 import com.google.android.material.slider.Slider;
@@ -37,7 +37,9 @@ import com.herak.bouldershare.classes.ImageFiles;
 import com.herak.bouldershare.classes.Hold;
 import com.herak.bouldershare.classes.MarkerAppearance;
 import com.herak.bouldershare.classes.MarkerSettings;
+import com.herak.bouldershare.classes.EditorSettings;
 import com.herak.bouldershare.data.BoulderRepository;
+import com.herak.bouldershare.enums.HoldType;
 
 import java.util.Objects;
 import java.io.IOException;
@@ -52,7 +54,16 @@ public class BoulderFragment extends Fragment {
     private TextView smartStatus;
     private MaterialSwitch smartMarkingSwitch;
     private MaterialButton fitPhotoButton, resizeHoldButton;
-    private AlertDialog sizeDialog;
+    private MaterialButton panelToggle;
+    private TextView legendStart, legendRegular, legendTop;
+    private View editorControls, controlsContent, sizePanel;
+    private boolean panelExpanded, showInstructions;
+    private BoulderProblemView.SmartMarkingStatus latestSmartStatus = BoulderProblemView.SmartMarkingStatus.IDLE;
+    private Slider sizeSlider;
+    private Hold resizingHold;
+    private int originalRadius, largestRadius;
+    private float initialSizeValue;
+    private OnBackPressedCallback resizeBackCallback;
 
     public boolean isBusy() { return saveModel != null && saveModel.busy; }
 
@@ -81,7 +92,37 @@ public class BoulderFragment extends Fragment {
         });
         fitPhotoButton = root.findViewById(R.id.action_fit_photo);
         resizeHoldButton = root.findViewById(R.id.action_resize_hold);
+        editorControls = root.findViewById(R.id.editor_controls);
+        controlsContent = root.findViewById(R.id.editor_controls_content);
+        panelToggle = root.findViewById(R.id.action_toggle_editor_controls);
+        panelExpanded = EditorSettings.isPanelExpanded(context);
+        showInstructions = EditorSettings.showInstructions(context);
+        panelToggle.setOnClickListener(view -> {
+            panelExpanded = !panelExpanded;
+            EditorSettings.setPanelExpanded(requireContext(), panelExpanded);
+            if (!panelExpanded) {
+                editor.cancelTypeAssignment();
+                editor.flushPendingSingleTap();
+                editor.cancelHoldResize();
+            }
+            updateEditorControls();
+        });
+        legendStart = root.findViewById(R.id.legend_start);
+        legendRegular = root.findViewById(R.id.legend_regular);
+        legendTop = root.findViewById(R.id.legend_top);
+        legendStart.setOnClickListener(view -> selectHoldType(HoldType.START_HOLD));
+        legendRegular.setOnClickListener(view -> selectHoldType(HoldType.REGULAR_HOLD));
+        legendTop.setOnClickListener(view -> selectHoldType(HoldType.TOP_HOLD));
+        sizePanel = root.findViewById(R.id.hold_size_panel);
+        sizeSlider = sizePanel.findViewById(R.id.hold_size);
+        sizeSlider.setLabelBehavior(LabelFormatter.LABEL_GONE);
+        sizeSlider.addOnChangeListener((slider, value, fromUser) -> {
+            if (resizingHold != null) editor.previewHoldResize(resizingHold, selectedRadius());
+        });
+        sizePanel.findViewById(R.id.hold_size_cancel).setOnClickListener(view -> closeHoldSizePanel(false));
+        sizePanel.findViewById(R.id.hold_size_apply).setOnClickListener(view -> closeHoldSizePanel(true));
         fitPhotoButton.setOnClickListener(view -> {
+            editor.cancelTypeAssignment();
             editor.flushPendingSingleTap();
             editor.cancelHoldResize();
             editor.resetViewport();
@@ -97,9 +138,9 @@ public class BoulderFragment extends Fragment {
             updateEditorControls();
         });
         editor.setOnHoldResizeRequestedListener(hold -> {
-            updateEditorControls();
-            showHoldSizeDialog(hold);
+            showHoldSizePanel(hold);
         });
+        editor.setOnHoldTypeChangedListener((type, assigning) -> updateEditorControls());
         updateEditorControls();
         return root;
     }
@@ -107,6 +148,8 @@ public class BoulderFragment extends Fragment {
     @Override public void onResume() {
         super.onResume();
         if (editor == null) return;
+        panelExpanded = EditorSettings.isPanelExpanded(requireContext());
+        showInstructions = EditorSettings.showInstructions(requireContext());
         MarkerAppearance previous = editor.getMarkerAppearance();
         MarkerAppearance current = MarkerSettings.load(requireContext());
         editor.setMarkerAppearance(current);
@@ -118,6 +161,13 @@ public class BoulderFragment extends Fragment {
         updateLegend(R.id.legend_start, current.startColor);
         updateLegend(R.id.legend_regular, current.regularColor);
         updateLegend(R.id.legend_top, current.topColor);
+        updateEditorControls();
+    }
+
+    private void selectHoldType(HoldType type) {
+        if (saveModel.busy || resizingHold != null) return;
+        editor.selectHoldType(type);
+        updateEditorControls();
     }
 
     private void updateLegend(int id, int color) {
@@ -134,6 +184,10 @@ public class BoulderFragment extends Fragment {
     }
 
     @Override public void onViewCreated(View view, Bundle state) {
+        resizeBackCallback = new OnBackPressedCallback(false) {
+            @Override public void handleOnBackPressed() { closeHoldSizePanel(false); }
+        };
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), resizeBackCallback);
         saveModel.result.observe(getViewLifecycleOwner(), result -> {
             if (result == null) return;
             MainActivity activity = (MainActivity) requireActivity();
@@ -173,22 +227,58 @@ public class BoulderFragment extends Fragment {
     private void updateEditorControls() {
         if (editor == null) return;
         boolean choosing = editor.isChoosingHoldToResize();
-        gestureHint.setText(choosing ? R.string.editor_resize_hint : R.string.editor_gesture_hint);
+        gestureHint.setText(choosing ? R.string.editor_resize_hint : editor.isAssigningHoldType()
+                ? R.string.editor_assign_type_hint : R.string.editor_gesture_hint);
+        gestureHint.setVisibility(showInstructions ? View.VISIBLE : View.GONE);
         resizeHoldButton.setText(choosing ? R.string.cancel : R.string.resize_hold);
         fitPhotoButton.setEnabled(!saveModel.busy);
         resizeHoldButton.setEnabled(!saveModel.busy);
         smartMarkingSwitch.setEnabled(!saveModel.busy);
+        panelToggle.setEnabled(!saveModel.busy);
+        boolean landscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        controlsContent.setVisibility(panelExpanded ? View.VISIBLE : View.GONE);
+        panelToggle.setContentDescription(getString(panelExpanded
+                ? R.string.editor_controls_collapse : R.string.editor_controls_expand));
+        panelToggle.setIconResource(panelExpanded ? R.drawable.ic_editor_collapse : R.drawable.ic_editor_expand);
+        panelToggle.setText(landscape && !panelExpanded ? "" : getString(panelExpanded
+                ? R.string.editor_controls_collapse : R.string.editor_controls_expand));
+        if (landscape) {
+            ViewGroup.LayoutParams params = editorControls.getLayoutParams();
+            params.width = Math.round((panelExpanded ? 280 : 56) * getResources().getDisplayMetrics().density);
+            editorControls.setLayoutParams(params);
+        }
+        updateLegendSelection(legendStart, HoldType.START_HOLD);
+        updateLegendSelection(legendRegular, HoldType.REGULAR_HOLD);
+        updateLegendSelection(legendTop, HoldType.TOP_HOLD);
+        showSmartMarkingStatus(latestSmartStatus);
+        boolean resizing = resizingHold != null;
+        editorControls.setVisibility(resizing ? View.GONE : View.VISIBLE);
+        sizePanel.setVisibility(resizing ? View.VISIBLE : View.GONE);
+        if (resizeBackCallback != null) resizeBackCallback.setEnabled(resizing);
         requireActivity().invalidateOptionsMenu();
     }
 
+    private void updateLegendSelection(TextView label, HoldType type) {
+        label.setSelected(editor.getCurrentHoldType() == type);
+        label.setActivated(label.isSelected() && editor.isAssigningHoldType());
+        label.setEnabled(!saveModel.busy);
+    }
+
     private void showSmartMarkingStatus(BoulderProblemView.SmartMarkingStatus status) {
+        latestSmartStatus = status;
         if (smartStatus == null) return;
+        if (!showInstructions && status != BoulderProblemView.SmartMarkingStatus.DETECTING
+                && status != BoulderProblemView.SmartMarkingStatus.UNAVAILABLE) {
+            smartStatus.setVisibility(View.GONE);
+            return;
+        }
         int message;
         switch (status) {
             case DETECTING: message = R.string.smart_marking_detecting; break;
             case FITTED: message = R.string.smart_marking_fitted; break;
             case MANUAL_FALLBACK: message = R.string.smart_marking_manual; break;
-            case UNAVAILABLE: message = R.string.smart_marking_unavailable; break;
+            case UNAVAILABLE: message = showInstructions ? R.string.smart_marking_unavailable
+                    : R.string.smart_marking_unavailable_status; break;
             default:
                 if (editor == null || !editor.isSmartMarkingEnabled()) {
                     smartStatus.setVisibility(View.GONE);
@@ -200,39 +290,30 @@ public class BoulderFragment extends Fragment {
         smartStatus.setVisibility(View.VISIBLE);
     }
 
-    private void showHoldSizeDialog(Hold hold) {
+    private void showHoldSizePanel(Hold hold) {
         if (editor == null || saveModel.busy) return;
-        View content = getLayoutInflater().inflate(R.layout.dialog_hold_size, null);
-        Slider slider = content.findViewById(R.id.hold_size);
-        int largestRadius = Math.max(2, Math.round(editor.getBoulderProblemInfo().getReferenceHeight() / 3f));
-        slider.setValueFrom(0);
-        slider.setValueTo(100);
-        slider.setLabelBehavior(LabelFormatter.LABEL_GONE);
+        largestRadius = Math.max(2, Math.round(editor.getBoulderProblemInfo().getReferenceHeight() / 3f));
         // Give small markers more slider travel, while leaving an untouched size exact.
-        int originalRadius = hold.getCircleRadius();
-        float initialValue = Math.max(0, Math.min(100,
+        originalRadius = hold.getCircleRadius();
+        initialSizeValue = Math.max(0, Math.min(100,
                 (float) Math.sqrt(Math.max(0, (originalRadius - 1f) / (largestRadius - 1))) * 100));
-        slider.setValue(initialValue);
-        sizeDialog = new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.hold_size)
-                .setView(content)
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.apply, (dialog, which) -> {
-                    if (editor != null) {
-                        float fraction = slider.getValue() / 100f;
-                        int radius = slider.getValue() == initialValue ? originalRadius
-                                : Math.round(1 + fraction * fraction * (largestRadius - 1));
-                        editor.resizeHold(hold, radius);
-                    }
-                }).create();
-        sizeDialog.setOnDismissListener(dialog -> {
-            sizeDialog = null;
-            if (editor != null) {
-                editor.cancelHoldResize();
-                updateEditorControls();
-            }
-        });
-        sizeDialog.show();
+        sizeSlider.setValue(initialSizeValue);
+        resizingHold = hold;
+        updateEditorControls();
+    }
+
+    private int selectedRadius() {
+        float fraction = sizeSlider.getValue() / 100f;
+        return sizeSlider.getValue() == initialSizeValue ? originalRadius
+                : Math.round(1 + fraction * fraction * (largestRadius - 1));
+    }
+
+    private void closeHoldSizePanel(boolean apply) {
+        if (editor == null || resizingHold == null) return;
+        if (apply) editor.resizeHold(resizingHold, selectedRadius());
+        resizingHold = null;
+        editor.cancelHoldResize();
+        updateEditorControls();
     }
 
     @Override public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -255,7 +336,9 @@ public class BoulderFragment extends Fragment {
                 return true;
             }
             MainActivity activity = (MainActivity) requireActivity();
+            closeHoldSizePanel(true);
             editor.flushPendingSingleTap();
+            editor.cancelTypeAssignment();
             editor.setEnabled(false);
             BoulderProblemInfo info = BoulderProblemInfo.fromBundle(editor.getBoulderProblemInfo().toBundle());
             boolean needsSave = activity.isHasUnsavedChanges() || info.getFinalBitmapUri() == null || info.getId() == null;
@@ -272,8 +355,18 @@ public class BoulderFragment extends Fragment {
     }
 
     @Override public void onDestroyView() {
-        if (sizeDialog != null) sizeDialog.dismiss();
-        if (editor != null) editor.setOnSmartMarkingStatusListener(null);
+        if (editor != null) {
+            editor.cancelHoldResize();
+            editor.setOnHoldResizeRequestedListener(null);
+            editor.setOnSmartMarkingStatusListener(null);
+            editor.setOnHoldTypeChangedListener(null);
+        }
+        resizingHold = null;
+        editorControls = controlsContent = sizePanel = null;
+        panelToggle = null;
+        legendStart = legendRegular = legendTop = null;
+        sizeSlider = null;
+        resizeBackCallback = null;
         editor = null;
         gestureHint = null;
         smartStatus = null;

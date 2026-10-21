@@ -1,6 +1,7 @@
 package com.herak.bouldershare;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.view.KeyEvent;
@@ -32,6 +33,25 @@ public class MarkerSettingsInstrumentedTest {
         MarkerSettings.save(context, MarkerAppearance.defaults());
     }
     @After public void restore() { MarkerSettings.save(context, previous); }
+
+    @Test public void instructionPreferenceSurvivesRecreationAndMarkerDefaults() {
+        SharedPreferences preferences = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        boolean hadPreference = preferences.contains("show_editor_instructions");
+        boolean original = EditorSettings.showInstructions(context);
+        EditorSettings.setShowInstructions(context, true);
+        try (ActivityScenario<SettingsActivity> scenario = ActivityScenario.launch(SettingsActivity.class)) {
+            onView(withId(R.id.show_editor_instructions)).perform(scrollTo(), click());
+            assertFalse(EditorSettings.showInstructions(context));
+            scenario.recreate();
+            onView(withId(R.id.show_editor_instructions)).perform(scrollTo()).check(matches(not(isChecked())));
+            onView(withId(R.id.marker_defaults)).perform(scrollTo(), click());
+            assertFalse(EditorSettings.showInstructions(context));
+            onView(withId(R.id.show_editor_instructions)).perform(scrollTo()).check(matches(not(isChecked())));
+        } finally {
+            if (hadPreference) EditorSettings.setShowInstructions(context, original);
+            else preferences.edit().remove("show_editor_instructions").commit();
+        }
+    }
 
     @Test public void settingsPersistAndInvalidHexSurvivesRecreationWithoutCommitting() {
         try (ActivityScenario<SettingsActivity> scenario = ActivityScenario.launch(SettingsActivity.class)) {

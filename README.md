@@ -74,6 +74,9 @@ Previously exported photos remain in their original gallery folders.
 
 ## Release signing
 
+For Play Console steps and the repeatable release checklist, see the
+[Google Play publishing guide](PLAY_STORE_GUIDE.md).
+
 Debug builds use the standard debug key and do not require private files.
 An unsigned release can be built without publishing credentials. If configured
 credentials refer to a missing keystore, the build warns and creates an unsigned
@@ -90,7 +93,8 @@ storePassword=your_store_password
 
 Run `./gradlew :app:assembleRelease` or `./gradlew :app:bundleRelease`.
 Before publishing, assign a version code higher than the last Play release.
-The existing local versionCode 9 / versionName 1.1 has been preserved.
+The prepared release uses versionCode 10 / versionName 2.0, following Play's
+highest uploaded version code 9 (confirmed on 21 October 2026).
 
 ## Modernization
 

@@ -18,6 +18,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.FileProvider;
@@ -289,12 +290,36 @@ public class MainActivity extends AppCompatActivity implements InfoFragment.OnIn
             return true;
         }
         if (item.getItemId() == R.id.action_donate) {
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.paypal.me/DarkoHerak")));
-            } catch (ActivityNotFoundException ignored) { }
+            showSupportOptions();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showSupportOptions() {
+        View options = getLayoutInflater().inflate(R.layout.dialog_support, null);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.action_donate)
+                .setView(options)
+                .setNegativeButton(R.string.cancel, null)
+                .create();
+        options.findViewById(R.id.support_revolut).setOnClickListener(view -> {
+            dialog.dismiss();
+            openSupportLink("https://revolut.me/darkokrad");
+        });
+        options.findViewById(R.id.support_paypal).setOnClickListener(view -> {
+            dialog.dismiss();
+            openSupportLink("https://www.paypal.me/DarkoHerak");
+        });
+        dialog.show();
+    }
+
+    private void openSupportLink(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (ActivityNotFoundException exception) {
+            Toast.makeText(this, R.string.support_no_browser, Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override public void onInfoStoredInteraction(BoulderProblemInfo info) {

@@ -54,7 +54,10 @@ public class BoulderProblemView extends View {
     private BoulderProblemInfo info;
     private Bitmap bitmap;
     private HoldType currentType = HoldType.START_HOLD;
+    private boolean assigningType;
+    private OnHoldTypeChangedListener typeListener;
     private Hold downHold, selectedForResize;
+    private int resizePreviewRadius;
     private PendingTap pendingTap;
     private PendingTap deferredDoubleTap;
     private Hold doubleTapTarget;
@@ -79,9 +82,13 @@ public class BoulderProblemView extends View {
     }
 
     public interface OnHoldResizeRequestedListener { void onHoldResizeRequested(Hold hold); }
+    public interface OnHoldTypeChangedListener { void onHoldTypeChanged(HoldType type, boolean assigning); }
     private static class PendingTap {
         final Hold location, target;
-        PendingTap(Hold location, Hold target) { this.location = location; this.target = target; }
+        final HoldType assignment;
+        PendingTap(Hold location, Hold target, HoldType assignment) {
+            this.location = location; this.target = target; this.assignment = assignment;
+        }
     }
 
     public BoulderProblemView(Context context) {
@@ -104,22 +111,31 @@ public class BoulderProblemView extends View {
         gestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
             @Override public boolean onSingleTapUp(MotionEvent event) {
-                if (!canEdit() || suppressSinglePointer || dragging || panning || !inside(event.getX(), event.getY())) return true;
+                if (!canEdit() || suppressSinglePointer || dragging || panning || selectedForResize != null
+                        || !inside(event.getX(), event.getY())) return true;
                 if (choosingResize) {
                     Hold selected = downHold;
                     if (selected != null && info.getHolds().contains(selected)) {
                         choosingResize = false;
                         cancelSmartRequest(selected);
                         selectedForResize = selected;
+                        resizePreviewRadius = selected.getCircleRadius();
                         pendingTap = null;
                         if (resizeListener != null) resizeListener.onHoldResizeRequested(selected);
                     }
-                } else pendingTap = new PendingTap(point(event.getX(), event.getY()), downHold);
+                } else pendingTap = new PendingTap(point(event.getX(), event.getY()), downHold,
+                        assigningType ? currentType : null);
                 return true;
             }
             @Override public boolean onSingleTapConfirmed(MotionEvent event) { flushPendingSingleTap(); return true; }
             @Override public boolean onDoubleTap(MotionEvent event) {
                 if (!canEdit() || suppressSinglePointer || choosingResize || selectedForResize != null) return true;
+                if (assigningType) {
+                    flushPendingSingleTap();
+                    cancelTapRecognition();
+                    suppressSinglePointer = true;
+                    return true;
+                }
                 deferredDoubleTap = pendingTap;
                 pendingTap = null;
                 doubleTapTarget = downHold;
@@ -134,6 +150,7 @@ public class BoulderProblemView extends View {
                         cancelSmartRequest(existing);
                         currentType = HoldType.values()[(existing.getType().ordinal() + 1) % HoldType.values().length];
                         existing.setType(currentType);
+                        notifyHoldTypeChanged();
                         changed();
                     }
                     clearDeferredDoubleTap();
@@ -190,7 +207,7 @@ public class BoulderProblemView extends View {
 
     public BoulderProblemInfo getBoulderProblemInfo() { return info; }
     public void setBoulderProblemInfo(BoulderProblemInfo value) {
-        cancelAllSmartRequests(); cancelHoldResize(); info = value; invalidate();
+        cancelAllSmartRequests(); cancelTypeAssignment(); cancelHoldResize(); info = value; invalidate();
     }
     public boolean isImageReady() { return bitmap != null && !imageRect.isEmpty(); }
     private boolean canEdit() { return isEnabled() && !released && isImageReady(); }
@@ -200,6 +217,23 @@ public class BoulderProblemView extends View {
         PendingTap tap = pendingTap;
         pendingTap = null;
         if (tap == null || !canEdit() || choosingResize || selectedForResize != null) return;
+        if (tap.assignment != null) {
+            if (!assigningType) return;
+            assigningType = false;
+            if (tap.target != null && info.getHolds().contains(tap.target)) {
+                if (tap.target.getType() != tap.assignment) {
+                    cancelSmartRequest(tap.target);
+                    tap.target.setType(tap.assignment);
+                    changed();
+                }
+            } else if (tap.target == null) {
+                addHold(tap.location, true);
+                changed();
+            }
+            notifyHoldTypeChanged();
+            performClick();
+            return;
+        }
         if (tap.target != null) {
             cancelSmartRequest(tap.target);
             if (!info.getHolds().remove(tap.target)) return;
@@ -214,6 +248,31 @@ public class BoulderProblemView extends View {
         hold.setCircleRadius(Math.max(1, Math.round(info.getReferenceHeight() / 25f)));
         info.getHolds().add(hold);
         if (estimate) startSmartRequest(hold);
+    }
+
+    public HoldType getCurrentHoldType() { return currentType; }
+    public boolean isAssigningHoldType() { return assigningType; }
+    /** Select a type for one explicit assignment; subsequent additions retain this type. */
+    public void selectHoldType(HoldType type) {
+        if (!isEnabled() || released || type == null) return;
+        boolean cancel = assigningType && currentType == type;
+        cancelHoldResize();
+        currentType = type;
+        assigningType = !cancel;
+        notifyHoldTypeChanged();
+    }
+    public void cancelTypeAssignment() {
+        if (!assigningType) return;
+        assigningType = false;
+        cancelGestures();
+        notifyHoldTypeChanged();
+    }
+    public void setOnHoldTypeChangedListener(OnHoldTypeChangedListener listener) {
+        typeListener = released ? null : listener;
+        notifyHoldTypeChanged();
+    }
+    private void notifyHoldTypeChanged() {
+        if (typeListener != null) typeListener.onHoldTypeChanged(currentType, assigningType);
     }
 
     public boolean isSmartMarkingEnabled() { return smartMarkingEnabled; }
@@ -343,6 +402,7 @@ public class BoulderProblemView extends View {
     public void setOnHoldResizeRequestedListener(OnHoldResizeRequestedListener listener) { resizeListener = listener; }
     public boolean isChoosingHoldToResize() { return choosingResize; }
     public boolean requestHoldResize() {
+        cancelTypeAssignment();
         flushPendingSingleTap(); cancelAllSmartRequests(); cancelGestures(); selectedForResize = null;
         choosingResize = canEdit() && !info.getHolds().isEmpty();
         return choosingResize;
@@ -350,12 +410,19 @@ public class BoulderProblemView extends View {
     public void cancelHoldResize() {
         choosingResize = false; selectedForResize = null; cancelGestures(); invalidate();
     }
+    /** Preview only in the editor; snapshots and exports keep the committed radius. */
+    public void previewHoldResize(Hold hold, int radius) {
+        if (hold != selectedForResize || !canEdit() || !info.getHolds().contains(hold)) return;
+        resizePreviewRadius = Math.max(1, radius);
+        invalidate();
+    }
     public void resizeHold(Hold hold, int radius) {
         if (hold != selectedForResize || !canEdit() || !info.getHolds().contains(hold)) return;
         cancelSmartRequest(hold);
         selectedForResize = null;
         int bounded = Math.max(1, radius);
         if (hold.getCircleRadius() != bounded) { hold.setCircleRadius(bounded); changed(); }
+        else invalidate();
     }
 
     private void cancelTapRecognition() {
@@ -397,7 +464,7 @@ public class BoulderProblemView extends View {
         try { scales.onTouchEvent(cancel); } finally { cancel.recycle(); }
     }
     @Override public void setEnabled(boolean enabled) {
-        if (!enabled) { cancelAllSmartRequests(); choosingResize = false; selectedForResize = null; cancelGestures(); }
+        if (!enabled) { cancelTypeAssignment(); cancelAllSmartRequests(); choosingResize = false; selectedForResize = null; cancelGestures(); }
         super.setEnabled(enabled);
     }
 
@@ -432,7 +499,8 @@ public class BoulderProblemView extends View {
         canvas.drawBitmap(bitmap, null, displayedRect, paint);
         canvas.save(); canvas.clipRect(displayedRect); canvas.translate(displayedRect.left, displayedRect.top);
         drawAnnotations(canvas, info, displayedRect.width(), displayedRect.height(),
-                bitmap.getWidth(), bitmap.getHeight(), markerAppearance); canvas.restore();
+                bitmap.getWidth(), bitmap.getHeight(), markerAppearance, selectedForResize, resizePreviewRadius);
+        canvas.restore();
     }
     public Canvas drawOnCustomCanvas(Canvas canvas) {
         if (bitmap != null) drawAnnotations(canvas, info, canvas.getWidth(), canvas.getHeight(),
@@ -450,6 +518,11 @@ public class BoulderProblemView extends View {
     }
     private static void drawAnnotations(Canvas canvas, BoulderProblemInfo info, float width, float height,
                                         float sourceWidth, float sourceHeight, MarkerAppearance appearance) {
+        drawAnnotations(canvas, info, width, height, sourceWidth, sourceHeight, appearance, null, 0);
+    }
+    private static void drawAnnotations(Canvas canvas, BoulderProblemInfo info, float width, float height,
+                                        float sourceWidth, float sourceHeight, MarkerAppearance appearance,
+                                        Hold previewHold, int previewRadius) {
         if (info == null || info.getReferenceWidth() <= 0 || info.getReferenceHeight() <= 0) return;
         Paint marker = new Paint(Paint.ANTI_ALIAS_FLAG);
         marker.setStyle(Paint.Style.STROKE);
@@ -457,7 +530,9 @@ public class BoulderProblemView extends View {
         if (info.getHolds() != null) for (Hold hold : info.getHolds()) {
             float x = hold.projectedX(width, info.getReferenceWidth());
             float y = hold.projectedY(height, info.getReferenceHeight());
-            float radius = hold.projectedRadius(width, height, info.getReferenceWidth(), info.getReferenceHeight());
+            float radius = hold == previewHold
+                    ? previewRadius * Math.min(width / info.getReferenceWidth(), height / info.getReferenceHeight())
+                    : hold.projectedRadius(width, height, info.getReferenceWidth(), info.getReferenceHeight());
             float centerline = appearance.centerlineRadius(radius, photoScale);
             if (appearance.borderWidth > 0) {
                 marker.setColor(Color.argb(160, 0, 0, 0));
@@ -561,7 +636,7 @@ public class BoulderProblemView extends View {
             float dx = x - downX, dy = y - downY;
             if (!dragging && !panning && dx * dx + dy * dy > touchSlop * touchSlop) {
                 recoverFirstTapForDrag();
-                dragging = downHold != null && !choosingResize && selectedForResize == null;
+                dragging = downHold != null && !assigningType && !choosingResize && selectedForResize == null;
                 panning = !dragging;
                 cancelTapRecognition();
             }
@@ -591,27 +666,34 @@ public class BoulderProblemView extends View {
 
     /** Freeze marker geometry before any activity, view, save, or share snapshot. */
     public void prepareForSnapshot() {
-        flushPendingSingleTap(); cancelAllSmartRequests();
+        flushPendingSingleTap(); cancelTypeAssignment(); cancelAllSmartRequests();
     }
 
     @Override protected Parcelable onSaveInstanceState() {
         prepareForSnapshot();
         SavedState state = new SavedState(super.onSaveInstanceState());
         state.zoom = viewport.getZoom(); state.centerX = viewport.getCenterX(); state.centerY = viewport.getCenterY();
+        state.holdType = currentType.ordinal();
         return state;
     }
     @Override protected void onRestoreInstanceState(Parcelable state) {
         if (!(state instanceof SavedState)) { super.onRestoreInstanceState(state); return; }
         SavedState saved = (SavedState) state;
         super.onRestoreInstanceState(saved.getSuperState());
-        viewport.restore(saved.zoom, saved.centerX, saved.centerY); invalidate();
+        viewport.restore(saved.zoom, saved.centerX, saved.centerY);
+        currentType = HoldType.values()[Math.max(0, Math.min(HoldType.values().length - 1, saved.holdType))];
+        assigningType = false;
+        notifyHoldTypeChanged();
+        invalidate();
     }
     public static class SavedState extends BaseSavedState {
         float zoom, centerX, centerY;
+        int holdType;
         SavedState(Parcelable parent) { super(parent); }
-        SavedState(Parcel source) { super(source); zoom = source.readFloat(); centerX = source.readFloat(); centerY = source.readFloat(); }
+        SavedState(Parcel source) { super(source); zoom = source.readFloat(); centerX = source.readFloat(); centerY = source.readFloat(); holdType = source.readInt(); }
         @Override public void writeToParcel(Parcel destination, int flags) {
             super.writeToParcel(destination, flags); destination.writeFloat(zoom); destination.writeFloat(centerX); destination.writeFloat(centerY);
+            destination.writeInt(holdType);
         }
         public static final Parcelable.Creator<SavedState> CREATOR = new Parcelable.Creator<SavedState>() {
             @Override public SavedState createFromParcel(Parcel source) { return new SavedState(source); }
@@ -624,7 +706,7 @@ public class BoulderProblemView extends View {
     @Override protected void onDetachedFromWindow() {
         if (released) { super.onDetachedFromWindow(); return; }
         released = true;
-        smartStatusListener = null; resizeListener = null;
+        smartStatusListener = null; resizeListener = null; typeListener = null;
         cancelAllSmartRequests(); cancelHoldResize(); imageExecutor.shutdownNow();
         // Native inference and close must run serially; shutdownNow could interrupt inference.
         final HoldEstimator closingEstimator = holdEstimator;

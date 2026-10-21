@@ -14,7 +14,11 @@
     <string name="problem_deleted">The selected boulder problem has been deleted</string>
     <string name="image_saved">Route saved to your library</string>
     <string name="action_save">Save</string>
-    <string name="action_donate">Donate</string>
+    <string name="action_donate">Support Bouldershare</string>
+    <string name="support_message">Help keep BoulderShare climbing. Choose how you would like to support the app.</string>
+    <string name="support_revolut" translatable="false">Revolut</string>
+    <string name="support_paypal" translatable="false">PayPal</string>
+    <string name="support_no_browser">No app is available to open this support link.</string>
     <string name="action_tutorial">How it works</string>
     <string name="app_intro">How it works</string>
 
@@ -59,6 +63,13 @@
     <string name="image_loading">Opening photo…</string>
     <string name="loading_photo">Opening photo…</string>
     <string name="editor_title">Mark holds</string>
+    <string name="editor_preferences_title">Editor</string>
+    <string name="show_editor_instructions">Show editor instructions</string>
+    <string name="show_editor_instructions_summary">Display gesture tips and guidance in the editor controls.</string>
+    <string name="editor_controls_expand">Show editor controls</string>
+    <string name="editor_controls_collapse">Hide editor controls</string>
+    <string name="editor_assign_type_hint">Tap a hold to set its type, or tap the photo to add one. Tap the selected type again to cancel.</string>
+    <string name="smart_marking_unavailable_status">Smart marking unavailable</string>
     <string name="saving_progress">Saving your route…</string>
     <string name="no_camera_app">No camera app is available. Choose a photo instead.</string>
     <string name="share_image">Share route</string>

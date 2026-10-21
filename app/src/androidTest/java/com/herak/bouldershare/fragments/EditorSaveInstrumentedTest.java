@@ -19,6 +19,7 @@ import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.google.android.material.slider.Slider;
 import com.herak.bouldershare.MainActivity;
 import com.herak.bouldershare.R;
 import com.herak.bouldershare.classes.BoulderProblemInfo;
@@ -94,6 +95,54 @@ public class EditorSaveInstrumentedTest {
         } finally {
             deleteRoute(context, info);
             if (addedOutput != null) context.getContentResolver().delete(addedOutput, null, null);
+            input.delete(); source.recycle();
+            SharedPreferences.Editor restore = preferences.edit();
+            if (hadFirstStart) restore.putBoolean("firstStart", firstStart); else restore.remove("firstStart");
+            restore.commit();
+        }
+    }
+
+    @Test public void savingDuringResizeCommitsThePreviewedSize() throws Exception {
+        Context context = ApplicationProvider.getApplicationContext();
+        SharedPreferences preferences = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        boolean hadFirstStart = preferences.contains("firstStart");
+        boolean firstStart = preferences.getBoolean("firstStart", true);
+        preferences.edit().putBoolean("firstStart", false).commit();
+        Bitmap source = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888);
+        source.eraseColor(Color.BLACK);
+        File input = photo(context, source);
+        BoulderProblemInfo info = route(Uri.fromFile(input));
+        info.setReferenceSize(600, 400);
+        Hold target = new Hold(300, 200, 37);
+        info.getHolds().add(target);
+        info.getHolds().add(new Hold(100, 100, 24));
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(activity -> {
+                activity.setmBoulderProblemInfo(info);
+                activity.setmBoulderBitmap(source);
+                activity.changeFragment(MainActivity.FRAGMENT_TYPE.BOULDER_FRAGMENT);
+                activity.getSupportFragmentManager().executePendingTransactions();
+                activity.setHasUnsavedChanges(false);
+                BoulderProblemView editor = activity.findViewById(R.id.boulderProblemView);
+                editor.measure(View.MeasureSpec.makeMeasureSpec(600, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(400, View.MeasureSpec.EXACTLY));
+                editor.layout(0, 0, 600, 400);
+                activity.findViewById(R.id.action_resize_hold).performClick();
+                tap(editor, 300, 200);
+                assertEquals(View.VISIBLE, activity.findViewById(R.id.hold_size_panel).getVisibility());
+                ((Slider) activity.findViewById(R.id.hold_size)).setValue(100);
+                assertEquals(37, target.getCircleRadius());
+                assertFalse(activity.isHasUnsavedChanges());
+                save(activity, editor);
+                assertEquals(133, target.getCircleRadius());
+                assertEquals(View.GONE, activity.findViewById(R.id.hold_size_panel).getVisibility());
+            });
+            awaitSave(scenario);
+            BoulderProblemInfo saved = BoulderRepository.load(context, info.getId());
+            assertEquals(133, saved.getHolds().get(0).getCircleRadius());
+            assertEquals(24, saved.getHolds().get(1).getCircleRadius());
+        } finally {
+            deleteRoute(context, info);
             input.delete(); source.recycle();
             SharedPreferences.Editor restore = preferences.edit();
             if (hadFirstStart) restore.putBoolean("firstStart", firstStart); else restore.remove("firstStart");

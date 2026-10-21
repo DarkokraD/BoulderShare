@@ -18,8 +18,10 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 import com.herak.bouldershare.classes.MarkerAppearance;
+import com.herak.bouldershare.classes.EditorSettings;
 import com.herak.bouldershare.classes.MarkerColors;
 import com.herak.bouldershare.classes.MarkerSettings;
 import com.herak.bouldershare.enums.HoldType;
@@ -87,6 +89,16 @@ public class SettingsActivity extends AppCompatActivity {
         reset.setId(R.id.marker_defaults); reset.setText(R.string.marker_restore_defaults);
         reset.setOnClickListener(view -> { save(MarkerAppearance.defaults()); buildContent(); });
         add(reset, 20); updateColorButtons();
+        add(text(R.string.editor_preferences_title, R.style.TextAppearance_Boulder_Title), 28);
+        MaterialSwitch instructions = new MaterialSwitch(this);
+        instructions.setId(R.id.show_editor_instructions);
+        instructions.setText(R.string.show_editor_instructions);
+        instructions.setTextAppearance(R.style.TextAppearance_Boulder_Body);
+        instructions.setMinHeight(dp(48));
+        instructions.setChecked(EditorSettings.showInstructions(this));
+        instructions.setOnCheckedChangeListener((button, checked) -> EditorSettings.setShowInstructions(this, checked));
+        add(instructions, 8);
+        add(text(R.string.show_editor_instructions_summary, R.style.TextAppearance_Boulder_Body), 6);
     }
 
     private void addDimension(int title, int hint, int id, float min, float max, float value) {
